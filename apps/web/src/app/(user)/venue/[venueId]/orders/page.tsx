@@ -31,7 +31,7 @@ export default function MyOrdersPage() {
         const validOrders = results
           .filter(Boolean)
           .map((res: any) => res.order)
-          .filter((o: any) => o.venue_id === venueId); // Only show orders for this venue
+          .filter((o: any) => o.branch_id === venueId || o.venue_id === venueId); // Only show orders for this venue
           
         // Sort descending by creation date (newest first)
         validOrders.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());

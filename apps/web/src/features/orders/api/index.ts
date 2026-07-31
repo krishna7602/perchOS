@@ -28,6 +28,17 @@ export function updateOrderStatus(orderId: string, orderStatus: string, token: s
   });
 }
 
+export const verifyPayment = async (
+  orderId: string, 
+  paymentData: { razorpay_order_id: string, razorpay_payment_id: string, razorpay_signature: string }
+) => {
+  const res = await apiFetch(`/orders/${orderId}/verify-payment`, {
+    method: "POST",
+    body: JSON.stringify(paymentData),
+  });
+  return res;
+};
+
 export function acceptOrder(orderId: string, token: string) {
   return apiFetch<{ status: string; order: Record<string, unknown> }>(`/admin/orders/${orderId}/accept`, {
     method: "POST",

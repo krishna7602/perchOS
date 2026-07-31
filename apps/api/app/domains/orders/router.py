@@ -64,6 +64,7 @@ async def create_order(payload: CreateOrderRequest):
     order = Order(
         restaurant_id=branch.restaurant_id,
         branch_id=branch.id,
+        venue_id=branch.id,
         order_token=order_token,
         customer_handle=payload.customer_handle,
         items=[
@@ -125,6 +126,52 @@ async def get_order(order_id: str):
     response["venue_name"] = branch.name if branch else None
 
     return {"order": response}
+
+
+@router.post("/orders/{order_id}/verify-payment")
+async def verify_payment(order_id: str, payload: VerifyPaymentRequest):
+    """Manually verify a Razorpay payment from the frontend to bypass webhook delays."""
+    order = await Order.get(PydanticObjectId(order_id))
+    if not order:
+        raise HTTPException(status_code=404, detail="order_not_found")
+        
+    payment = await Payment.find_one(Payment.order_id == order.id)
+    if not payment:
+        raise HTTPException(status_code=404, detail="payment_not_found")
+        
+    if payment.status == "paid":
+        return {"ok": True, "status": "already_paid"}
+        
+    from app.domains.venues.restaurant_model import Restaurant
+    restaurant = await Restaurant.get(order.restaurant_id)
+    key_secret = restaurant.razorpay_key_secret if restaurant else None
+    
+    if not key_secret:
+        raise HTTPException(status_code=400, detail="razorpay_not_configured")
+        
+    gateway = GATEWAYS.get("razorpay")
+    
+    # Verify signature
+    is_valid = gateway.verify_payment_signature(
+        payload.razorpay_order_id, 
+        payload.razorpay_payment_id, 
+        payload.razorpay_signature, 
+        key_secret
+    )
+    
+    if not is_valid:
+        raise HTTPException(status_code=400, detail="invalid_signature")
+        
+    # Mark as paid
+    payment.status = "paid"
+    payment.provider_payment_id = payload.razorpay_payment_id
+    await payment.save()
+    
+    order.payment_status = "paid"
+    order.order_status = "received"
+    await order.save()
+    
+    return {"ok": True, "order": order.dict()}
 
 
 @router.get("/admin/orders/{venue_id}")

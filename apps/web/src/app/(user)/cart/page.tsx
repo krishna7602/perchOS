@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useCart } from "@/hooks/useCart";
 import { createOrder } from "@/lib/api";
+import { verifyPayment } from "@/features/orders/api";
 import { PaymentMethodPicker } from "@/features/orders/components/PaymentMethodPicker";
 import Script from "next/script";
 import { Button } from "@/components/ui/Button";
@@ -67,8 +68,17 @@ export default function CartPage() {
           name: "Perch",
           description: "Order Payment",
           order_id: providerOrderId,
-          handler: function (response: any) {
-            // Webhook will handle actual verification in the backend, but we route user forward
+          handler: async function (response: any) {
+            try {
+              setIsSubmitting(true);
+              await verifyPayment(orderId, {
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature,
+              });
+            } catch (err) {
+              console.error("Payment verification failed:", err);
+            }
             cart.clearCart();
             router.push(`/venue/${cart.venueId}/orders/${orderId}`);
           },

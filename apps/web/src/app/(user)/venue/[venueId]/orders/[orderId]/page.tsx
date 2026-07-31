@@ -6,7 +6,7 @@ import Link from "next/link";
 import { getOrder } from "@/lib/api";
 import { ORDER_STATUSES, ORDER_STATUS_LABELS, ORDER_STATUS_EMOJI } from "@/lib/theme";
 import { Loader } from "@/components/ui/Loader";
-import { CheckCircle, ArrowLeft } from "lucide-react";
+import { CheckCircle, ArrowLeft, Printer } from "lucide-react";
 
 export default function OrderPage() {
   const params = useParams();
@@ -58,8 +58,19 @@ export default function OrderPage() {
   const currentIndex = ORDER_STATUSES.indexOf(currentStatus as typeof ORDER_STATUSES[number]);
   const items = order.items as Array<{ name: string; price: number; quantity: number; variant_name?: string }>;
 
+  const handlePrint = () => {
+    // Hide standard elements that shouldn't be on the invoice
+    const nav = document.querySelector('nav');
+    if (nav) nav.style.display = 'none';
+    
+    window.print();
+    
+    // Restore
+    if (nav) nav.style.display = 'flex';
+  };
+
   return (
-    <div className="min-h-screen px-4 py-8 pb-[110px]" style={{ background: "var(--color-bg)" }}>
+    <div className="min-h-screen px-4 py-8 pb-[110px] print:bg-white print:pb-0" style={{ background: "var(--color-bg)" }}>
       <div className="max-w-lg mx-auto animate-fade-in">
         <Link 
           href={`/venue/${venueId}/orders`}
@@ -238,6 +249,23 @@ export default function OrderPage() {
               ? "💵 Pay on Delivery"
               : "⏳ Payment Pending"}
           </span>
+        </div>
+
+        {/* Download Invoice Button */}
+        <div className="mt-8 text-center print:hidden">
+          <button
+            onClick={handlePrint}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all"
+            style={{
+              background: "white",
+              color: "var(--color-primary)",
+              border: "1px solid var(--color-border)",
+              boxShadow: "var(--shadow-sm)",
+            }}
+          >
+            <Printer size={16} />
+            Download Invoice
+          </button>
         </div>
       </div>
     </div>

@@ -30,3 +30,10 @@ class RazorpayGateway(PaymentGateway):
             webhook_secret.encode(), body, hashlib.sha256
         ).hexdigest()
         return hmac.compare_digest(expected, signature)
+        
+    def verify_payment_signature(self, order_id: str, payment_id: str, signature: str, key_secret: str) -> bool:
+        message = f"{order_id}|{payment_id}"
+        expected = hmac.new(
+            key_secret.encode(), message.encode(), hashlib.sha256
+        ).hexdigest()
+        return hmac.compare_digest(expected, signature)
