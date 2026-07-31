@@ -10,8 +10,14 @@ interface PaymentMethodPickerProps {
 
 const methods = [
   {
+    id: "razorpay",
+    label: "Pay via UPI / Card",
+    description: "Secure payment via Razorpay (UPI, Cards, Wallets)",
+    icon: CreditCard,
+  },
+  {
     id: "dummy_card",
-    label: "Card Payment",
+    label: "Test Card Payment",
     description: "Simulated card payment (demo)",
     icon: CreditCard,
   },

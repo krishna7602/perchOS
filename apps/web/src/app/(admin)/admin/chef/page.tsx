@@ -52,7 +52,7 @@ export default function ChefPortalPage() {
         try {
           const res = await listVenues(t);
           if (res.venues && res.venues.length > 0) {
-            setBranchId(res.venues[0]._id || res.venues[0].id);
+            setBranchId(String(res.venues[0]._id || res.venues[0].id));
           }
         } catch (err) {
           console.warn("Could not fetch venues for branch_id fallback");
@@ -154,7 +154,7 @@ export default function ChefPortalPage() {
         } else {
           const res = await listVenues(t);
           if (res.venues && res.venues.length > 0) {
-            bid = res.venues[0]._id || res.venues[0].id;
+            bid = String(res.venues[0]._id || res.venues[0].id);
             setBranchId(bid);
           }
         }

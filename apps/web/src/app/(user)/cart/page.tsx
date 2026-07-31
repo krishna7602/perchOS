@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useCart } from "@/hooks/useCart";
 import { createOrder } from "@/lib/api";
 import { PaymentMethodPicker } from "@/features/orders/components/PaymentMethodPicker";
+import Script from "next/script";
 import { Button } from "@/components/ui/Button";
 import { ArrowLeft, Minus, Plus, X } from "lucide-react";
 
@@ -39,14 +40,16 @@ export default function CartPage() {
         items: validItems.map((i) => ({
           menu_item_id: i.menu_item_id,
           name: i.name,
+          variant_name: i.variant_name,
           price: i.price,
           quantity: i.quantity,
         })),
         payment_method: paymentMethod,
-      });
+      }) as any;
 
-      const order = result.order as Record<string, any>;
+      const order = result.order;
       const orderId = order._id || order.id; // handle possible _id mapping
+      const providerOrderId = result.provider_order_id;
       
       // Save order to local storage for the Orders tab
       const savedOrders = JSON.parse(localStorage.getItem("perch_my_orders") || "[]");
@@ -55,8 +58,37 @@ export default function CartPage() {
         localStorage.setItem("perch_my_orders", JSON.stringify(savedOrders));
       }
 
-      cart.clearCart();
-      router.push(`/venue/${cart.venueId}/orders/${orderId}`);
+      if (paymentMethod === "razorpay" && providerOrderId) {
+        // Open Razorpay Checkout
+        const options = {
+          key: result.razorpay_key_id || "rzp_test_YOUR_KEY", 
+          amount: cart.total * 100, // in paise
+          currency: "INR",
+          name: "Perch",
+          description: "Order Payment",
+          order_id: providerOrderId,
+          handler: function (response: any) {
+            // Webhook will handle actual verification in the backend, but we route user forward
+            cart.clearCart();
+            router.push(`/venue/${cart.venueId}/orders/${orderId}`);
+          },
+          prefill: {
+            name: handle,
+          },
+          theme: {
+            color: "#8B5E3C", // Perch primary color
+          },
+        };
+        const rzp = new (window as any).Razorpay(options);
+        rzp.on('payment.failed', function (response: any){
+          setError("Payment failed. Please try again.");
+          setIsSubmitting(false);
+        });
+        rzp.open();
+      } else {
+        cart.clearCart();
+        router.push(`/venue/${cart.venueId}/orders/${orderId}`);
+      }
     } catch (error) {
       setError("Failed to place order. Please try again.");
       setIsSubmitting(false);
@@ -65,6 +97,7 @@ export default function CartPage() {
 
   return (
     <div className="min-h-screen" style={{ background: "var(--color-bg)" }}>
+      <Script src="https://checkout.razorpay.com/v1/checkout.js" strategy="lazyOnload" />
       {/* Header */}
       <div
         className="sticky top-0 z-30 px-4 py-4"
@@ -120,11 +153,11 @@ export default function CartPage() {
                 </h2>
               </div>
               <div className="divide-y" style={{ borderColor: "var(--color-border)" }}>
-                {cart.items.map((item) => (
-                  <div key={item.menu_item_id} className="flex items-center gap-3 px-4 py-3">
+                {cart.items.map((item, index) => (
+                  <div key={`${item.menu_item_id}-${item.variant_name || index}`} className="flex items-center gap-3 px-4 py-3">
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium truncate" style={{ color: "var(--color-text)" }}>
-                        {item.name}
+                        {item.name} {item.variant_name ? <span className="text-xs text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded ml-1">{item.variant_name}</span> : ""}
                       </p>
                       <p className="text-xs" style={{ color: "var(--color-muted)" }}>
                         ₹{item.price.toFixed(2)} each
@@ -132,7 +165,7 @@ export default function CartPage() {
                     </div>
                     <div className="flex items-center gap-2">
                       <button
-                        onClick={() => cart.updateQuantity(item.menu_item_id, item.quantity - 1)}
+                        onClick={() => cart.updateQuantity(item.menu_item_id, item.variant_name, item.quantity - 1)}
                         className="w-6 h-6 rounded-md flex items-center justify-center cursor-pointer"
                         style={{ background: "var(--color-bg)", border: "1px solid var(--color-border)" }}
                       >
@@ -140,7 +173,7 @@ export default function CartPage() {
                       </button>
                       <span className="text-sm font-medium w-5 text-center">{item.quantity}</span>
                       <button
-                        onClick={() => cart.updateQuantity(item.menu_item_id, item.quantity + 1)}
+                        onClick={() => cart.updateQuantity(item.menu_item_id, item.variant_name, item.quantity + 1)}
                         className="w-6 h-6 rounded-md flex items-center justify-center cursor-pointer"
                         style={{ background: "var(--color-primary)", color: "white" }}
                       >
@@ -151,7 +184,7 @@ export default function CartPage() {
                       ₹{(item.price * item.quantity).toFixed(2)}
                     </p>
                     <button
-                      onClick={() => cart.removeItem(item.menu_item_id)}
+                      onClick={() => cart.removeItem(item.menu_item_id, item.variant_name)}
                       className="p-1 rounded hover:bg-red-50 cursor-pointer"
                     >
                       <X size={12} style={{ color: "var(--color-danger)" }} />

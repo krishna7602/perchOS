@@ -5,10 +5,15 @@ import { useState, useEffect, useCallback } from "react";
 export interface CartItem {
   menu_item_id: string;
   name: string;
+  variant_name?: string;
   price: number;
   quantity: number;
   is_veg: boolean;
 }
+
+const getCartItemId = (item: { menu_item_id: string; variant_name?: string }) => {
+  return item.variant_name ? `${item.menu_item_id}-${item.variant_name}` : item.menu_item_id;
+};
 
 const CART_KEY = "perch_cart";
 
@@ -56,10 +61,11 @@ export function useCart(venueId?: string) {
   const addItem = useCallback(
     (item: Omit<CartItem, "quantity">) => {
       setItems((prev) => {
-        const existing = prev.find((i) => i.menu_item_id === item.menu_item_id);
+        const itemId = getCartItemId(item);
+        const existing = prev.find((i) => getCartItemId(i) === itemId);
         if (existing) {
           return prev.map((i) =>
-            i.menu_item_id === item.menu_item_id
+            getCartItemId(i) === itemId
               ? { ...i, quantity: i.quantity + 1 }
               : i
           );
@@ -70,18 +76,20 @@ export function useCart(venueId?: string) {
     []
   );
 
-  const removeItem = useCallback((menuItemId: string) => {
-    setItems((prev) => prev.filter((i) => i.menu_item_id !== menuItemId));
+  const removeItem = useCallback((menuItemId: string, variantName?: string) => {
+    const idToRemove = getCartItemId({ menu_item_id: menuItemId, variant_name: variantName });
+    setItems((prev) => prev.filter((i) => getCartItemId(i) !== idToRemove));
   }, []);
 
-  const updateQuantity = useCallback((menuItemId: string, quantity: number) => {
+  const updateQuantity = useCallback((menuItemId: string, variantName: string | undefined, quantity: number) => {
+    const idToUpdate = getCartItemId({ menu_item_id: menuItemId, variant_name: variantName });
     if (quantity <= 0) {
-      setItems((prev) => prev.filter((i) => i.menu_item_id !== menuItemId));
+      setItems((prev) => prev.filter((i) => getCartItemId(i) !== idToUpdate));
       return;
     }
     setItems((prev) =>
       prev.map((i) =>
-        i.menu_item_id === menuItemId ? { ...i, quantity } : i
+        getCartItemId(i) === idToUpdate ? { ...i, quantity } : i
       )
     );
   }, []);

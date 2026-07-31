@@ -56,10 +56,10 @@ export default function OrderPage() {
 
   const currentStatus = order.order_status as string;
   const currentIndex = ORDER_STATUSES.indexOf(currentStatus as typeof ORDER_STATUSES[number]);
-  const items = order.items as Array<{ name: string; price: number; quantity: number }>;
+  const items = order.items as Array<{ name: string; price: number; quantity: number; variant_name?: string }>;
 
   return (
-    <div className="min-h-screen px-4 py-8 pb-24" style={{ background: "var(--color-bg)" }}>
+    <div className="min-h-screen px-4 py-8 pb-[110px]" style={{ background: "var(--color-bg)" }}>
       <div className="max-w-lg mx-auto animate-fade-in">
         <Link 
           href={`/venue/${venueId}/orders`}
@@ -77,11 +77,19 @@ export default function OrderPage() {
             className="text-2xl font-bold mb-1"
             style={{ fontFamily: "var(--font-heading)", color: "var(--color-primary)" }}
           >
-            {currentStatus === "served" ? "Order Complete!" : "Order Tracker"}
+            {currentStatus === "served" ? "Invoice / Receipt" : "Order Tracker"}
           </h1>
-          <p className="text-sm" style={{ color: "var(--color-muted)" }}>
-            Order #{((order._id || order.id) as string).slice(-6).toUpperCase()}
+          <p className="text-sm font-semibold" style={{ color: "var(--color-text)" }}>
+            Order {order.order_token as string || `#${((order._id || order.id) as string).slice(-6).toUpperCase()}`}
           </p>
+          <div className="mt-2 text-xs" style={{ color: "var(--color-muted)" }}>
+            {!!order.cafe_name && !!order.venue_name && (
+              <p>{order.cafe_name as string} ({order.venue_name as string})</p>
+            )}
+            {!!order.gst_number && (
+              <p className="font-mono mt-0.5">GSTIN: {order.gst_number as string}</p>
+            )}
+          </div>
         </div>
 
         {/* Status tracker */}
@@ -167,10 +175,13 @@ export default function OrderPage() {
             border: "1px solid var(--color-border)",
           }}
         >
-          <div className="px-5 py-3" style={{ borderBottom: "1px solid var(--color-border)" }}>
+          <div className="px-5 py-3 flex justify-between items-center" style={{ borderBottom: "1px solid var(--color-border)" }}>
             <h2 className="text-sm font-semibold" style={{ color: "var(--color-text)" }}>
-              Items
+              Itemized Bill
             </h2>
+            <span className="text-xs" style={{ color: "var(--color-muted)" }}>
+              {new Date(order.created_at as string).toLocaleString()}
+            </span>
           </div>
           <div>
             {items.map((item, i) => (
@@ -184,7 +195,7 @@ export default function OrderPage() {
               >
                 <div>
                   <p className="text-sm" style={{ color: "var(--color-text)" }}>
-                    {item.name}
+                    {item.name} {item.variant_name ? <span className="text-xs text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded ml-1">{item.variant_name}</span> : ""}
                   </p>
                   <p className="text-xs" style={{ color: "var(--color-muted)" }}>
                     × {item.quantity}

@@ -1,19 +1,46 @@
 from fastapi import APIRouter, Depends
 
 from app.domains.venues.branch_model import Branch
+from app.domains.venues.restaurant_model import Restaurant
 from app.domains.orders.models import Order
 from app.domains.menu.models import MenuItem
 from app.domains.auth.models import User, Role
 from app.domains.chat.manager import chat_manager
 from app.deps import get_current_user, RequireRole
+from pydantic import BaseModel
 
 router = APIRouter(prefix="/admin", tags=["admin"])
+require_owner = RequireRole([Role.OWNER])
 require_staff = RequireRole([Role.OWNER, Role.MANAGER, Role.CHEF, Role.WAITER])
 
 
 @router.get("/dashboard")
 async def dashboard(user: User = Depends(require_staff)):
     """Admin dashboard stats: venue count, active rooms, today's order summary."""
+    if user.role == Role.SUPER_ADMIN:
+        # Global stats for Super Admin
+        branches = await Branch.find_all().to_list()
+        branch_ids = [b.id for b in branches]
+        total_orders = await Order.find_all().count()
+        paid_orders = await Order.find(Order.payment_status == "paid").to_list()
+        total_revenue = sum(o.total for o in paid_orders)
+        active_rooms = 0
+        total_online = 0
+        for b in branches:
+            count = chat_manager.get_online_count(str(b.id))
+            if count > 0:
+                active_rooms += 1
+                total_online += count
+        total_items = await MenuItem.find_all().count()
+        return {
+            "venue_count": len(branches),
+            "active_chat_rooms": active_rooms,
+            "total_online_users": total_online,
+            "total_orders": total_orders,
+            "total_revenue": total_revenue,
+            "total_menu_items": total_items,
+        }
+
     if not user.restaurant_id:
         return {
             "venue_count": 0,
@@ -60,3 +87,49 @@ async def dashboard(user: User = Depends(require_staff)):
         "total_revenue": total_revenue,
         "total_menu_items": total_items,
     }
+
+
+class PaymentSettingsUpdate(BaseModel):
+    razorpay_key_id: str | None = None
+    razorpay_key_secret: str | None = None
+    razorpay_webhook_secret: str | None = None
+
+
+@router.get("/settings/payments")
+async def get_payment_settings(user: User = Depends(require_owner)):
+    """Get the current restaurant's payment configuration."""
+    if not user.restaurant_id:
+        return {"error": "no_restaurant"}
+    
+    restaurant = await Restaurant.get(user.restaurant_id)
+    if not restaurant:
+        return {"error": "not_found"}
+        
+    return {
+        "razorpay_key_id": restaurant.razorpay_key_id or "",
+        "razorpay_key_secret": restaurant.razorpay_key_secret or "",
+        "razorpay_webhook_secret": restaurant.razorpay_webhook_secret or ""
+    }
+
+
+@router.patch("/settings/payments")
+async def update_payment_settings(payload: PaymentSettingsUpdate, user: User = Depends(require_owner)):
+    """Update the restaurant's Razorpay configuration."""
+    if not user.restaurant_id:
+        return {"error": "no_restaurant"}
+        
+    restaurant = await Restaurant.get(user.restaurant_id)
+    if not restaurant:
+        return {"error": "not_found"}
+        
+    if payload.razorpay_key_id is not None:
+        restaurant.razorpay_key_id = payload.razorpay_key_id
+    if payload.razorpay_key_secret is not None:
+        if payload.razorpay_key_secret != "********": # Don't update if it's the masked value
+            restaurant.razorpay_key_secret = payload.razorpay_key_secret
+    if payload.razorpay_webhook_secret is not None:
+        if payload.razorpay_webhook_secret != "********":
+            restaurant.razorpay_webhook_secret = payload.razorpay_webhook_secret
+        
+    await restaurant.save()
+    return {"status": "success"}

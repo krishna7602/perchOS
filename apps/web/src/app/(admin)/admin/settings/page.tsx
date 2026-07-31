@@ -3,7 +3,8 @@
 import { useState, useEffect } from "react";
 import { updateVenue, listVenues } from "@/lib/api";
 import { Button } from "@/components/ui/Button";
-import { ClipboardList, Save, MapPin, Wifi, Info, Image as ImageIcon } from "lucide-react";
+import { ClipboardList, Save, MapPin, Wifi, Info, Image as ImageIcon, CreditCard } from "lucide-react";
+import { getPaymentSettings, updatePaymentSettings } from "@/features/admin/api";
 
 export default function SettingsPage() {
   const [venueId, setVenueId] = useState("");
@@ -14,6 +15,9 @@ export default function SettingsPage() {
     logo_url: "",
     wifi_ssid: "",
     wifi_password: "",
+    razorpay_key_id: "",
+    razorpay_key_secret: "",
+    razorpay_webhook_secret: "",
   });
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -27,6 +31,14 @@ export default function SettingsPage() {
         if (data.venues && data.venues.length > 0) {
           const v = data.venues[0] as any;
           setVenueId(v._id || v.id);
+          
+          let paymentSettings = { razorpay_key_id: "", razorpay_key_secret: "", razorpay_webhook_secret: "" };
+          try {
+            paymentSettings = await getPaymentSettings(token);
+          } catch (e) {
+            console.error("Failed to load payment settings", e);
+          }
+          
           setFormData({
             name: v.name || "",
             address: v.address || "",
@@ -34,6 +46,9 @@ export default function SettingsPage() {
             logo_url: v.logo_url || "",
             wifi_ssid: v.wifi_ssid || "",
             wifi_password: v.wifi_password ? "********" : "",
+            razorpay_key_id: paymentSettings.razorpay_key_id || "",
+            razorpay_key_secret: paymentSettings.razorpay_key_secret ? "********" : "",
+            razorpay_webhook_secret: paymentSettings.razorpay_webhook_secret ? "********" : "",
           });
         }
       } catch (err) {
@@ -66,6 +81,14 @@ export default function SettingsPage() {
       }
 
       await updateVenue(venueId, payload, token);
+      
+      const paymentPayload = {
+        razorpay_key_id: formData.razorpay_key_id,
+        razorpay_key_secret: formData.razorpay_key_secret,
+        razorpay_webhook_secret: formData.razorpay_webhook_secret,
+      };
+      await updatePaymentSettings(paymentPayload, token);
+
       setMessage("Settings saved successfully!");
     } catch (err) {
       setMessage("Failed to save settings.");
@@ -208,6 +231,54 @@ export default function SettingsPage() {
                 value={formData.wifi_password}
                 onChange={handleChange}
                 placeholder="Leave blank if no password"
+                className="w-full px-4 py-2.5 rounded-xl text-sm outline-none transition-all"
+                style={{ background: "var(--color-bg)", border: "1.5px solid var(--color-border)", color: "var(--color-text)" }}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Payments */}
+        <div className="p-6 rounded-2xl" style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}>
+          <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
+            <CreditCard size={18} /> Payment Configuration
+          </h2>
+          <p className="text-xs mb-4" style={{ color: "var(--color-muted)" }}>
+            Connect your Razorpay account to accept UPI and Card payments. Money goes directly to your account.
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="md:col-span-2">
+              <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--color-text)" }}>Razorpay Key ID</label>
+              <input
+                type="text"
+                name="razorpay_key_id"
+                value={formData.razorpay_key_id}
+                onChange={handleChange}
+                placeholder="rzp_live_xxxxxxxxxxx"
+                className="w-full px-4 py-2.5 rounded-xl text-sm outline-none transition-all"
+                style={{ background: "var(--color-bg)", border: "1.5px solid var(--color-border)", color: "var(--color-text)" }}
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--color-text)" }}>Razorpay Key Secret</label>
+              <input
+                type="password"
+                name="razorpay_key_secret"
+                value={formData.razorpay_key_secret}
+                onChange={handleChange}
+                placeholder="Leave blank if unchanged"
+                className="w-full px-4 py-2.5 rounded-xl text-sm outline-none transition-all"
+                style={{ background: "var(--color-bg)", border: "1.5px solid var(--color-border)", color: "var(--color-text)" }}
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--color-text)" }}>Webhook Secret</label>
+              <input
+                type="password"
+                name="razorpay_webhook_secret"
+                value={formData.razorpay_webhook_secret}
+                onChange={handleChange}
+                placeholder="Leave blank if unchanged"
                 className="w-full px-4 py-2.5 rounded-xl text-sm outline-none transition-all"
                 style={{ background: "var(--color-bg)", border: "1.5px solid var(--color-border)", color: "var(--color-text)" }}
               />

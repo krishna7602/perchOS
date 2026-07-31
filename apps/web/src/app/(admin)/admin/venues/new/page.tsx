@@ -14,6 +14,11 @@ export default function NewVenuePage() {
     lng: "",
     wifi_ssid: "",
     wifi_password: "",
+    address: "",
+    phone: "",
+    email: "",
+    gst_number: "",
+    description: "",
   });
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -35,11 +40,16 @@ export default function NewVenuePage() {
         }));
         setIsDetecting(false);
       },
-      () => {
-        setError("Failed to get location. Please ensure location permissions are granted.");
+      (err) => {
+        console.error(err);
+        if (err.code === err.TIMEOUT) {
+          setError("Location request timed out. Please enter manually.");
+        } else {
+          setError("Failed to get location. Please ensure location permissions are granted.");
+        }
         setIsDetecting(false);
       },
-      { timeout: 10000 }
+      { enableHighAccuracy: false, timeout: 15000, maximumAge: 0 }
     );
   };
 
@@ -59,6 +69,11 @@ export default function NewVenuePage() {
           lng: parseFloat(form.lng) || 0,
           wifi_ssid: form.wifi_ssid || undefined,
           wifi_password: form.wifi_password || undefined,
+          address: form.address || undefined,
+          phone: form.phone || undefined,
+          email: form.email || undefined,
+          gst_number: form.gst_number || undefined,
+          description: form.description || undefined,
         },
         token
       );
@@ -169,6 +184,80 @@ export default function NewVenuePage() {
                 style={inputStyle}
               />
             </div>
+          </div>
+
+          <hr style={{ borderColor: "var(--color-border)" }} />
+          
+          <h3 className="text-sm font-semibold" style={{ color: "var(--color-text)" }}>
+            Contact & Business Details
+          </h3>
+          
+          <div>
+            <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--color-text)" }}>
+              Full Address
+            </label>
+            <textarea
+              value={form.address}
+              onChange={(e) => setForm({ ...form, address: e.target.value })}
+              placeholder="e.g. 123 Cafe Street, City, State, ZIP"
+              className="w-full px-4 py-2.5 rounded-xl text-sm outline-none resize-none h-20"
+              style={inputStyle}
+            />
+          </div>
+          
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--color-text)" }}>
+                Contact Number
+              </label>
+              <input
+                type="text"
+                value={form.phone}
+                onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                placeholder="+91 9876543210"
+                className="w-full px-4 py-2.5 rounded-xl text-sm outline-none"
+                style={inputStyle}
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--color-text)" }}>
+                Email Address
+              </label>
+              <input
+                type="email"
+                value={form.email}
+                onChange={(e) => setForm({ ...form, email: e.target.value })}
+                placeholder="hello@cafe.com"
+                className="w-full px-4 py-2.5 rounded-xl text-sm outline-none"
+                style={inputStyle}
+              />
+            </div>
+            <div className="col-span-2">
+              <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--color-text)" }}>
+                GST Number (Optional)
+              </label>
+              <input
+                type="text"
+                value={form.gst_number}
+                onChange={(e) => setForm({ ...form, gst_number: e.target.value })}
+                placeholder="22AAAAA0000A1Z5"
+                className="w-full px-4 py-2.5 rounded-xl text-sm outline-none"
+                style={inputStyle}
+              />
+            </div>
+          </div>
+          
+          <div>
+            <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--color-text)" }}>
+              Description (Optional)
+            </label>
+            <textarea
+              value={form.description}
+              onChange={(e) => setForm({ ...form, description: e.target.value })}
+              placeholder="A short description about this venue..."
+              className="w-full px-4 py-2.5 rounded-xl text-sm outline-none resize-none h-20"
+              style={inputStyle}
+            />
           </div>
 
           <hr style={{ borderColor: "var(--color-border)" }} />

@@ -8,6 +8,10 @@ class Restaurant(Document):
     owner_id: str | None = None  # Will link to the root User who created this tenant
     created_at: datetime = datetime.utcnow()
     is_active: bool = True
+    razorpay_key_id: str | None = None
+    razorpay_key_secret: str | None = None
+    razorpay_webhook_secret: str | None = None
+    gst_number: str | None = None
 
     class Settings:
         name = "restaurants"

@@ -17,6 +17,11 @@ from app.domains.menu.router import router as menu_router
 from app.domains.orders.router import router as orders_router
 from app.domains.chat.router import router as chat_ws_router
 from app.routers.admin import router as admin_router
+from app.domains.networking.profile_router import router as networking_profile_router
+from app.domains.networking.discovery_router import router as discovery_router
+from app.domains.networking.connections_router import router as connections_router
+from app.domains.chat.direct_router import router as direct_chat_router
+from app.routers.payments import router as payments_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -76,3 +81,8 @@ app.include_router(orders_router)
 app.include_router(chat_ws_router)
 app.include_router(admin_router)
 app.include_router(team_chat_router)
+app.include_router(networking_profile_router)
+app.include_router(discovery_router)
+app.include_router(connections_router)
+app.include_router(direct_chat_router)
+app.include_router(payments_router)

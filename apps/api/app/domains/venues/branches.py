@@ -39,6 +39,9 @@ async def create_branch(payload: VenueCreateRequest, user: User = Depends(requir
         wifi_password_iv=enc.iv if enc else None,
         wifi_password_tag=enc.tag if enc else None,
         address=payload.address,
+        phone=payload.phone,
+        email=payload.email,
+        gst_number=payload.gst_number,
         description=payload.description,
         logo_url=payload.logo_url,
         qr_token=str(uuid4()),
@@ -121,6 +124,12 @@ async def update_branch(branch_id: str, payload: VenueUpdateRequest, user: User 
         branch.wifi_ssid = payload.wifi_ssid
     if payload.address is not None:
         branch.address = payload.address
+    if payload.phone is not None:
+        branch.phone = payload.phone
+    if payload.email is not None:
+        branch.email = payload.email
+    if payload.gst_number is not None:
+        branch.gst_number = payload.gst_number
     if payload.description is not None:
         branch.description = payload.description
     if payload.logo_url is not None:
@@ -177,6 +186,9 @@ async def get_branch_by_qr(qr_token: str):
         wifi_ssid=branch.wifi_ssid,
         wifi_password=wifi_password,
         address=branch.address,
+        phone=branch.phone,
+        email=branch.email,
+        gst_number=branch.gst_number,
         description=branch.description,
         logo_url=branch.logo_url,
     )

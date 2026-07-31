@@ -5,13 +5,14 @@ import { useParams, useRouter } from "next/navigation";
 import { listMenuItems, createMenuItem, updateMenuItem, deleteMenuItem } from "@/lib/api";
 import { Button } from "@/components/ui/Button";
 import { Skeleton } from "@/components/ui/Skeleton";
-import { ArrowLeft, Plus, Pencil, Trash2, X, Leaf } from "lucide-react";
+import { ArrowLeft, Plus, Pencil, Trash2, X, Leaf, ChevronDown, ChevronRight } from "lucide-react";
 
 interface MenuItemData {
   _id: string;
   name: string;
   description?: string;
-  price: number;
+  price?: number;
+  variants?: any[];
   category: string;
   is_veg: boolean;
   available: boolean;
@@ -42,6 +43,14 @@ export default function MenuManagePage() {
     } catch {}
     setIsLoading(false);
   };
+
+  const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({});
+
+  const categories = items.reduce<Record<string, MenuItemData[]>>((acc, item) => {
+    const cat = item.category || "misc";
+    (acc[cat] = acc[cat] || []).push(item);
+    return acc;
+  }, {});
 
   useEffect(() => {
     if (token) fetchItems();
@@ -164,34 +173,61 @@ export default function MenuManagePage() {
           <div className="space-y-3">
             {[1, 2, 3].map((i) => <Skeleton key={i} className="h-20" />)}
           </div>
-        ) : items.length === 0 ? (
+        ) : Object.keys(categories).length === 0 ? (
           <div className="text-center py-16">
             <p className="text-5xl mb-4">🍽️</p>
             <p className="text-lg font-medium mb-2" style={{ color: "var(--color-text)" }}>No menu items yet</p>
             <p className="text-sm" style={{ color: "var(--color-muted)" }}>Add items to build your menu.</p>
           </div>
         ) : (
-          <div className="space-y-3">
-            {items.map((item) => (
-              <div key={item._id} className="flex items-center gap-3 p-4 rounded-xl" style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)", boxShadow: "var(--shadow-sm)" }}>
-                <span className="inline-flex items-center justify-center w-5 h-5 rounded-sm text-xs border" style={{ borderColor: item.is_veg ? "#22c55e" : "#ef4444", color: item.is_veg ? "#22c55e" : "#ef4444" }}>
-                  {item.is_veg ? <Leaf size={12} /> : "●"}
-                </span>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate" style={{ color: "var(--color-text)" }}>{item.name}</p>
-                  <p className="text-xs" style={{ color: "var(--color-muted)" }}>{item.category} · ₹{item.price.toFixed(2)}</p>
+          <div className="space-y-4">
+            {Object.entries(categories).map(([category, catItems]) => {
+              const isExpanded = expandedCategories[category] !== undefined ? expandedCategories[category] : false;
+              return (
+                <div key={category} className="rounded-2xl overflow-hidden transition-all duration-200" style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)", boxShadow: "var(--shadow-sm)" }}>
+                  <button onClick={() => setExpandedCategories(prev => ({...prev, [category]: !isExpanded}))} className="w-full flex items-center justify-between p-4 cursor-pointer hover:bg-black/5 transition-colors">
+                    <div className="flex items-center gap-2">
+                      <h2 className="text-lg font-semibold capitalize" style={{ fontFamily: "var(--font-heading)", color: "var(--color-text)" }}>{category}</h2>
+                      <span className="text-xs font-medium px-2 py-0.5 rounded-full" style={{ background: "var(--color-bg)", color: "var(--color-muted)" }}>{catItems.length}</span>
+                    </div>
+                    <div style={{ color: "var(--color-muted)" }}>
+                      {isExpanded ? <ChevronDown size={20} /> : <ChevronRight size={20} />}
+                    </div>
+                  </button>
+
+                  {isExpanded && (
+                    <div className="p-3 pt-0 space-y-2">
+                      {catItems.map((item) => (
+                        <div key={item._id} className="flex items-center gap-3 p-4 rounded-xl" style={{ background: "var(--color-bg)", border: "1px solid var(--color-border)", boxShadow: "var(--shadow-sm)" }}>
+                          <span className="inline-flex items-center justify-center w-5 h-5 rounded-sm text-xs border shrink-0" style={{ borderColor: item.is_veg ? "#22c55e" : "#ef4444", color: item.is_veg ? "#22c55e" : "#ef4444" }}>
+                            {item.is_veg ? <Leaf size={12} /> : "●"}
+                          </span>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium truncate" style={{ color: "var(--color-text)" }}>{item.name}</p>
+                            <p className="text-xs" style={{ color: "var(--color-muted)" }}>
+                              {item.category} · {item.variants && item.variants.length > 0 ? (
+                                <span className="ml-1 opacity-80">{item.variants.map((v: any) => `${v.name}: ₹${v.price.toFixed(2)}`).join(", ")}</span>
+                              ) : (
+                                <span>₹{item.price?.toFixed(2) || "0.00"}</span>
+                              )}
+                            </p>
+                          </div>
+                          <span className={`text-xs px-2 py-0.5 rounded-full ${item.available ? "status-ready" : "status-received"}`}>
+                            {item.available ? "Available" : "Unavailable"}
+                          </span>
+                          <button onClick={() => handleEdit(item)} className="p-1.5 rounded-lg hover:bg-black/5 cursor-pointer">
+                            <Pencil size={14} style={{ color: "var(--color-muted)" }} />
+                          </button>
+                          <button onClick={() => handleDelete(item._id)} className="p-1.5 rounded-lg hover:bg-red-50 cursor-pointer">
+                            <Trash2 size={14} style={{ color: "var(--color-danger)" }} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
-                <span className={`text-xs px-2 py-0.5 rounded-full ${item.available ? "status-ready" : "status-received"}`}>
-                  {item.available ? "Available" : "Unavailable"}
-                </span>
-                <button onClick={() => handleEdit(item)} className="p-1.5 rounded-lg hover:bg-black/5 cursor-pointer">
-                  <Pencil size={14} style={{ color: "var(--color-muted)" }} />
-                </button>
-                <button onClick={() => handleDelete(item._id)} className="p-1.5 rounded-lg hover:bg-red-50 cursor-pointer">
-                  <Trash2 size={14} style={{ color: "var(--color-danger)" }} />
-                </button>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

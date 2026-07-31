@@ -17,12 +17,17 @@ async def init_db():
     from app.domains.venues.restaurant_model import Restaurant
     from app.domains.venues.branch_model import Branch
     from app.domains.menu.models import MenuItem
-    from app.domains.orders.models import Order
+    from app.domains.orders.models import Order, Counter, Payment
     from app.domains.chat.team_models import TeamChannel, TeamMessage
+
+    from app.domains.networking.models import CustomerProfile, ConnectionRequest, Connection, DirectMessage
 
     await init_beanie(
         database=db,
-        document_models=[User, Attendance, Restaurant, Branch, MenuItem, Order, TeamChannel, TeamMessage],
+        document_models=[
+            User, Attendance, Restaurant, Branch, MenuItem, Order, Counter, Payment, TeamChannel, TeamMessage,
+            CustomerProfile, ConnectionRequest, Connection, DirectMessage
+        ],
     )
 
 

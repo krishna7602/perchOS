@@ -11,12 +11,13 @@ import { ArrowLeft, ChevronRight, RefreshCw } from "lucide-react";
 interface OrderData {
   _id: string;
   customer_handle: string;
-  items: { name: string; quantity: number; price: number }[];
+  items: { name: string; quantity: number; price: number; variant_name?: string }[];
   total: number;
   payment_method: string;
   payment_status: string;
   order_status: string;
   created_at: string;
+  order_token?: string;
 }
 
 export default function OrdersKanbanPage() {
@@ -129,8 +130,8 @@ export default function OrdersKanbanPage() {
                       }}
                     >
                       <div className="flex items-center justify-between mb-2">
-                        <span className="text-xs font-mono" style={{ color: "var(--color-muted)" }}>
-                          #{order._id.slice(-6).toUpperCase()}
+                        <span className="text-xs font-bold font-mono px-2 py-1 rounded" style={{ color: "var(--color-primary)", background: "rgba(185, 84, 45, 0.1)" }}>
+                          {order.order_token || `#${order._id.slice(-6).toUpperCase()}`}
                         </span>
                         <span
                           className={`text-xs px-2 py-0.5 rounded-full ${
@@ -146,7 +147,7 @@ export default function OrdersKanbanPage() {
                       <div className="space-y-0.5 mb-2">
                         {order.items.map((item, i) => (
                           <p key={i} className="text-xs" style={{ color: "var(--color-text)" }}>
-                            {item.quantity}× {item.name}
+                            {item.quantity}× {item.name} {item.variant_name ? <span className="text-[10px] text-gray-500 bg-gray-100 px-1 rounded ml-1">{item.variant_name}</span> : ""}
                           </p>
                         ))}
                       </div>

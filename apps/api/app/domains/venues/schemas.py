@@ -10,6 +10,9 @@ class VenueCreateRequest(BaseModel):
     wifi_ssid: str | None = None
     wifi_password: str | None = None  # plaintext in request, encrypted at rest
     address: str | None = None
+    phone: str | None = None
+    email: str | None = None
+    gst_number: str | None = None
     description: str | None = None
     logo_url: str | None = None
 
@@ -23,6 +26,9 @@ class VenueUpdateRequest(BaseModel):
     wifi_ssid: str | None = None
     wifi_password: str | None = None
     address: str | None = None
+    phone: str | None = None
+    email: str | None = None
+    gst_number: str | None = None
     description: str | None = None
     logo_url: str | None = None
 
@@ -35,5 +41,8 @@ class VenuePublicResponse(BaseModel):
     wifi_ssid: str | None = None
     wifi_password: str | None = None  # decrypted for display on join page
     address: str | None = None
+    phone: str | None = None
+    email: str | None = None
+    gst_number: str | None = None
     description: str | None = None
     logo_url: str | None = None

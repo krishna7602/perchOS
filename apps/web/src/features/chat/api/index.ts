@@ -1,9 +1,33 @@
 import { apiFetch, API_URL } from "@/lib/apiClient";
 
 export function joinRoom(data: { qr_token: string; display_name?: string; is_anonymous: boolean }) {
+  let deviceId = "";
+  if (typeof window !== "undefined") {
+    deviceId = localStorage.getItem("perch_device_id") || "";
+    if (!deviceId) {
+      deviceId = Math.random().toString(36).substring(2, 15);
+      localStorage.setItem("perch_device_id", deviceId);
+    }
+  }
+
+  // Handle anonymous fallback
+  const name = data.display_name || (data.is_anonymous ? `Guest_${Math.floor(Math.random() * 10000)}` : "Guest");
+
   return apiFetch<{ venue_id: string; venue_name: string; chat_token: string; handle: string }>(
     "/sessions/join",
-    { method: "POST", body: JSON.stringify(data) }
+    { 
+      method: "POST", 
+      body: JSON.stringify({
+        qr_token: data.qr_token,
+        device_id: deviceId,
+        name: name,
+        mode: "Networking",
+        is_visible: true,
+        interests: [],
+        skills: [],
+        professional_tags: []
+      }) 
+    }
   );
 }
 

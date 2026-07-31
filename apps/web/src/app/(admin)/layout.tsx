@@ -126,18 +126,23 @@ export default function AdminLayout({
       >
         {/* Brand */}
         <div className="px-5 py-5">
-          <Link href="/admin/dashboard" className="flex items-center gap-2">
-            <Coffee size={24} style={{ color: "var(--color-primary)" }} />
-            <span
-              className="text-xl font-bold"
-              style={{ fontFamily: "var(--font-heading)", color: "var(--color-primary)" }}
-            >
-              Perch
-            </span>
+          <Link href="/admin/dashboard" className="flex flex-col gap-1">
+            <div className="flex items-center gap-2">
+              <Coffee size={24} style={{ color: "var(--color-primary)" }} />
+              <span
+                className="text-xl font-bold truncate"
+                style={{ fontFamily: "var(--font-heading)", color: "var(--color-primary)" }}
+                title={restaurantName}
+              >
+                {role === "super_admin" ? "Perch HQ" : restaurantName}
+              </span>
+            </div>
+            {role !== "super_admin" && (
+              <p className="text-[10px] font-semibold tracking-wide uppercase" style={{ color: "var(--color-muted)" }}>
+                Powered by Perch
+              </p>
+            )}
           </Link>
-          <p className="text-xs mt-1 font-semibold tracking-wide" style={{ color: "var(--color-muted)" }}>
-            {restaurantName}
-          </p>
         </div>
 
         {/* Nav */}

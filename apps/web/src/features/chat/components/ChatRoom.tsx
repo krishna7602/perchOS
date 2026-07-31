@@ -138,7 +138,7 @@ export function ChatRoom({
   };
 
   return (
-    <div className="flex flex-col h-screen" style={{ background: "var(--color-bg)" }}>
+    <div className="flex flex-col h-[calc(100dvh-72px)]" style={{ background: "var(--color-bg)" }}>
       {/* Header */}
       <div
         className="flex items-center justify-between px-4 py-3 shrink-0"

@@ -10,7 +10,7 @@ class DummyGateway(PaymentGateway):
     For development and testing only.
     """
 
-    async def charge(self, order_id: str, amount: float) -> dict:
+    async def charge(self, order_id: str, amount: float, linked_account_id: str | None = None) -> dict:
         await asyncio.sleep(1.2)  # simulate network latency for realistic loading state
         return {
             "status": "paid",

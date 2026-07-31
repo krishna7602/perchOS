@@ -10,6 +10,9 @@ class Branch(Document):
     lng: float | None = None
     
     address: str | None = None
+    phone: str | None = None
+    email: str | None = None
+    gst_number: str | None = None
     description: str | None = None
     logo_url: str | None = None
     

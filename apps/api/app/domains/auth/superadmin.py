@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
-
+from beanie import PydanticObjectId
 from app.domains.auth.models import User, Role
 from app.domains.venues.restaurant_model import Restaurant
 from app.domains.venues.branch_model import Branch
@@ -13,6 +13,7 @@ router = APIRouter(prefix="/superadmin", tags=["superadmin"])
 class CreateCafeRequest(BaseModel):
     cafe_name: str
     password: str
+    gst_number: str | None = None
 
 @router.post("/register-cafe")
 async def register_cafe(
@@ -34,6 +35,7 @@ async def register_cafe(
     # Create the Restaurant Tenant
     restaurant = Restaurant(
         name=payload.cafe_name.strip(),
+        gst_number=payload.gst_number.strip() if payload.gst_number else None,
         owner_id="system"  # Will be updated once user is created
     )
     await restaurant.insert()
@@ -91,7 +93,8 @@ async def list_cafes(
             "owner_id": r.owner_id,
             "owner_email": owner.email if owner else None,
             "owner_name": owner.name if owner else None,
-            "created_at": r.id.generation_time.isoformat() if hasattr(r.id, "generation_time") else None
+            "created_at": r.id.generation_time.isoformat() if hasattr(r.id, "generation_time") else None,
+            "gst_number": r.gst_number
         })
     return {"cafes": results}
 

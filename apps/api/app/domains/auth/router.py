@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, Depends
 
-from app.domains.auth.models import User, Role
+from app.domains.auth.models import User, Role, StaffStatus
 from app.domains.venues.restaurant_model import Restaurant
 from app.core.security import verify_password, create_access_token
 from app.core.config import settings
@@ -25,6 +25,9 @@ async def admin_login(payload: LoginRequest):
         restaurant = await Restaurant.get(user.restaurant_id)
         if restaurant:
             restaurant_name = restaurant.name
+
+    user.status = StaffStatus.AVAILABLE
+    await user.save()
 
     claims = {
         "role": user.role.value,
@@ -80,7 +83,9 @@ async def admin_google_login(payload: GoogleLoginRequest):
         await restaurant.insert()
         
         user.restaurant_id = restaurant.id
-        await user.save()
+
+    user.status = StaffStatus.AVAILABLE
+    await user.save()
 
     claims = {
         "role": user.role.value,

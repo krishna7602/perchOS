@@ -55,7 +55,7 @@ export default function MenuPage() {
   }
 
   return (
-    <div className="min-h-screen pb-20" style={{ background: "var(--color-bg)" }}>
+    <div className="min-h-screen pb-[140px]" style={{ background: "var(--color-bg)" }}>
       {/* Header */}
       <div
         className="sticky top-0 z-30 px-4 py-4"
@@ -95,17 +95,19 @@ export default function MenuPage() {
             _id: string;
             name: string;
             description?: string;
-            price: number;
+            price?: number;
+            variants?: { name: string, price: number }[];
             category: string;
             is_veg: boolean;
             image_url?: string;
             available: boolean;
           }>}
-          onAddToCart={(item: any) =>
+          onAddToCart={(item: any, variant?: any) =>
             cart.addItem({
               menu_item_id: item._id || item.id,
               name: item.name,
-              price: item.price,
+              variant_name: variant?.name,
+              price: variant?.price ?? item.price,
               is_veg: item.is_veg,
             })
           }
@@ -114,7 +116,7 @@ export default function MenuPage() {
 
       {/* Floating cart button */}
       {cart.itemCount > 0 && (
-        <div className="fixed bottom-4 left-4 right-4 z-20">
+        <div className="fixed bottom-[80px] left-4 right-4 z-20">
           <button
             onClick={() => setCartOpen(true)}
             className="w-full max-w-2xl mx-auto flex items-center justify-between px-5 py-4 rounded-2xl transition-all duration-200 hover:scale-[1.01] cursor-pointer"

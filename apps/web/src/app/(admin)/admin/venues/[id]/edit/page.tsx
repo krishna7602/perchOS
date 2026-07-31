@@ -17,6 +17,11 @@ export default function EditVenuePage() {
   const [lng, setLng] = useState("");
   const [wifiSsid, setWifiSsid] = useState("");
   const [wifiPassword, setWifiPassword] = useState("");
+  const [address, setAddress] = useState("");
+  const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState("");
+  const [gstNumber, setGstNumber] = useState("");
+  const [description, setDescription] = useState("");
   
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(true);
@@ -44,6 +49,11 @@ export default function EditVenuePage() {
         setLat(venue.lat?.toString() || "");
         setLng(venue.lng?.toString() || "");
         setWifiSsid(venue.wifi_ssid || "");
+        setAddress(venue.address || "");
+        setPhone(venue.phone || "");
+        setEmail(venue.email || "");
+        setGstNumber(venue.gst_number || "");
+        setDescription(venue.description || "");
         // We do not fetch the plaintext wifi password from the API for security reasons,
         // so the password field is intentionally left blank unless they want to update it.
       } catch (err) {
@@ -72,11 +82,16 @@ export default function EditVenuePage() {
         setLng(position.coords.longitude.toFixed(6));
         setIsDetecting(false);
       },
-      () => {
-        setError("Unable to retrieve your location. Please ensure you have granted permission.");
+      (err) => {
+        console.error(err);
+        if (err.code === err.TIMEOUT) {
+          setError("Location request timed out. Please enter manually.");
+        } else {
+          setError("Unable to retrieve your location. Please ensure you have granted permission.");
+        }
         setIsDetecting(false);
       },
-      { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
+      { enableHighAccuracy: false, timeout: 15000, maximumAge: 0 }
     );
   };
 
@@ -96,6 +111,11 @@ export default function EditVenuePage() {
         name,
         lat: parseFloat(lat),
         lng: parseFloat(lng),
+        address,
+        phone,
+        email,
+        gst_number: gstNumber,
+        description,
       };
 
       if (wifiSsid.trim()) {
@@ -186,6 +206,65 @@ export default function EditVenuePage() {
                 className="w-full px-4 py-2.5 rounded-xl text-sm outline-none"
                 style={inputStyle}
               />
+            </div>
+          </div>
+
+          <div className="pt-4 border-t border-gray-100">
+            <h3 className="text-sm font-medium mb-4 text-gray-600">Contact & Business Details</h3>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">Full Address</label>
+                <textarea 
+                  value={address} 
+                  onChange={(e) => setAddress(e.target.value)} 
+                  placeholder="e.g. 123 Cafe Street, City, State, ZIP" 
+                  className="w-full px-4 py-2.5 rounded-xl text-sm outline-none resize-none h-20"
+                  style={inputStyle}
+                />
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1">Contact Number</label>
+                  <input 
+                    value={phone} 
+                    onChange={(e) => setPhone(e.target.value)} 
+                    placeholder="e.g. +91 9876543210" 
+                    className="w-full px-4 py-2.5 rounded-xl text-sm outline-none"
+                    style={inputStyle}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Email Address</label>
+                  <input 
+                    type="email"
+                    value={email} 
+                    onChange={(e) => setEmail(e.target.value)} 
+                    placeholder="e.g. hello@centralperk.com" 
+                    className="w-full px-4 py-2.5 rounded-xl text-sm outline-none"
+                    style={inputStyle}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">GST Number (Optional)</label>
+                  <input 
+                    value={gstNumber} 
+                    onChange={(e) => setGstNumber(e.target.value)} 
+                    placeholder="e.g. 22AAAAA0000A1Z5" 
+                    className="w-full px-4 py-2.5 rounded-xl text-sm outline-none"
+                    style={inputStyle}
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Description (Optional)</label>
+                <textarea 
+                  value={description} 
+                  onChange={(e) => setDescription(e.target.value)} 
+                  placeholder="A short description about this venue..." 
+                  className="w-full px-4 py-2.5 rounded-xl text-sm outline-none resize-none h-20"
+                  style={inputStyle}
+                />
+              </div>
             </div>
           </div>
 

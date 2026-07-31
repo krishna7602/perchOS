@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 
-export default function MenuRedirectPage({ params }: { params: { qrToken: string } }) {
-  redirect(`/join/${params.qrToken}`);
+export default async function MenuRedirectPage({ params }: { params: Promise<{ qrToken: string }> }) {
+  const { qrToken } = await params;
+  redirect(`/join/${qrToken}`);
 }

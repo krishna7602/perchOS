@@ -11,9 +11,11 @@ export default function SuperAdminCafesPage() {
 
   // Modals state
   const [newCafeName, setNewCafeName] = useState("");
+  const [newCafeGst, setNewCafeGst] = useState("");
   const [editingCafe, setEditingCafe] = useState<CafeItem | null>(null);
   const [editName, setEditName] = useState("");
   const [credentials, setCredentials] = useState<{ email: string; pass: string } | null>(null);
+  const [localPasswords, setLocalPasswords] = useState<Record<string, string>>({});
 
   useEffect(() => {
     fetchCafes();
@@ -44,12 +46,14 @@ export default function SuperAdminCafesPage() {
       const res = await fetch("http://localhost:8000/superadmin/register-cafe", {
         method: "POST",
         headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
-        body: JSON.stringify({ cafe_name: newCafeName, password: tempPass })
+        body: JSON.stringify({ cafe_name: newCafeName, password: tempPass, gst_number: newCafeGst })
       });
       const data = await res.json();
       if (res.ok) {
         setCredentials({ email: data.cafe_id, pass: tempPass });
+        setLocalPasswords(prev => ({ ...prev, [data.cafe_id]: tempPass }));
         setNewCafeName("");
+        setNewCafeGst("");
         fetchCafes();
       } else {
         alert("Failed: " + data.detail);
@@ -88,6 +92,7 @@ export default function SuperAdminCafesPage() {
       const token = localStorage.getItem("perch_admin_token") || "";
       const res = await resetCafeOwnerPassword(ownerId, token);
       setCredentials({ email: res.email, pass: res.new_password });
+      setLocalPasswords(prev => ({ ...prev, [res.email]: res.new_password }));
     } catch (e) {
       alert("Failed to reset password");
     }
@@ -125,6 +130,17 @@ export default function SuperAdminCafesPage() {
                   onChange={e => setNewCafeName(e.target.value)}
                   className="w-full px-4 py-2.5 rounded-xl border outline-none bg-gray-50 focus:bg-white focus:border-[var(--color-primary)] transition-colors text-sm"
                   placeholder="e.g. The Coffee House"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-500 mb-1">GST Number</label>
+                <input
+                  type="text"
+                  required
+                  value={newCafeGst}
+                  onChange={e => setNewCafeGst(e.target.value)}
+                  className="w-full px-4 py-2.5 rounded-xl border outline-none bg-gray-50 focus:bg-white focus:border-[var(--color-primary)] transition-colors text-sm"
+                  placeholder="e.g. 22AAAAA0000A1Z5"
                 />
               </div>
               <button
@@ -183,7 +199,7 @@ export default function SuperAdminCafesPage() {
                 <thead className="bg-gray-50/50 text-xs text-gray-500 uppercase tracking-wider">
                   <tr>
                     <th className="px-6 py-4 font-medium">Cafe Details</th>
-                    <th className="px-6 py-4 font-medium">Owner</th>
+                    <th className="px-6 py-4 font-medium">Owner Credentials</th>
                     <th className="px-6 py-4 font-medium text-right">Actions</th>
                   </tr>
                 </thead>
@@ -193,10 +209,15 @@ export default function SuperAdminCafesPage() {
                       <td className="px-6 py-4">
                         <div className="font-medium text-gray-900">{cafe.name}</div>
                         <div className="text-xs text-gray-500 font-mono mt-0.5">ID: {cafe.restaurant_id}</div>
+                        {cafe.gst_number && <div className="text-xs text-gray-500 font-mono mt-0.5">GST: {cafe.gst_number}</div>}
                       </td>
                       <td className="px-6 py-4">
-                        <div className="text-gray-900">{cafe.owner_name}</div>
-                        <div className="text-xs text-gray-500">{cafe.owner_email}</div>
+                        <div className="text-gray-900 font-mono text-xs mb-1">
+                          <span className="text-gray-400">ID:</span> {cafe.owner_email}
+                        </div>
+                        <div className="text-gray-900 font-mono text-xs">
+                          <span className="text-gray-400">Pass:</span> {localPasswords[cafe.owner_email] || "••••••••"}
+                        </div>
                       </td>
                       <td className="px-6 py-4 text-right">
                         <div className="flex items-center justify-end gap-2">

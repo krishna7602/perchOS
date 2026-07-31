@@ -20,7 +20,6 @@ async def get_menu_by_qr(menu_qr_token: str):
 
     items = await MenuItem.find(
         MenuItem.branch_id == branch.id,
-        MenuItem.available == True,
     ).to_list()
 
     return {
@@ -44,7 +43,6 @@ async def get_menu_by_venue(venue_id: str):
 
     items = await MenuItem.find(
         MenuItem.branch_id == branch.id,
-        MenuItem.available == True,
     ).to_list()
 
     return {
@@ -82,10 +80,12 @@ async def create_menu_item(
         name=payload.name,
         description=payload.description,
         price=payload.price,
+        variants=[v.model_dump() for v in payload.variants] if payload.variants else [],
         category=payload.category,
         is_veg=payload.is_veg,
         image_url=payload.image_url,
         available=payload.available,
+        is_coming_soon=payload.is_coming_soon,
     )
     await item.insert()
     return {"item": item.model_dump(mode="json")}

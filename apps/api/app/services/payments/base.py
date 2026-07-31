@@ -8,7 +8,7 @@ class PaymentGateway(ABC):
     """
 
     @abstractmethod
-    async def charge(self, order_id: str, amount: float) -> dict:
+    async def charge(self, order_id: str, amount: float, linked_account_id: str | None = None) -> dict:
         """Process a payment.
 
         Returns:

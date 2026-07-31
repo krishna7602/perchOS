@@ -60,7 +60,7 @@ export default function MyOrdersPage() {
   }
 
   return (
-    <div className="min-h-[100dvh] pb-24" style={{ background: "var(--color-bg)" }}>
+    <div className="min-h-[100dvh] pb-[110px]" style={{ background: "var(--color-bg)" }}>
       {/* Header */}
       <div
         className="sticky top-0 z-30 px-4 py-4"

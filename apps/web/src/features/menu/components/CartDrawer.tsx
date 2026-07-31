@@ -9,8 +9,8 @@ interface CartDrawerProps {
   total: number;
   isOpen: boolean;
   onClose: () => void;
-  onUpdateQuantity: (menuItemId: string, quantity: number) => void;
-  onRemove: (menuItemId: string) => void;
+  onUpdateQuantity: (menuItemId: string, variantName: string | undefined, quantity: number) => void;
+  onRemove: (menuItemId: string, variantName?: string) => void;
   onCheckout: () => void;
 }
 
@@ -68,7 +68,7 @@ export function CartDrawer({
           ) : (
             items.map((item) => (
               <div
-                key={item.menu_item_id}
+                key={item.variant_name ? `${item.menu_item_id}-${item.variant_name}` : item.menu_item_id}
                 className="flex items-center gap-3 p-3 rounded-xl"
                 style={{
                   background: "var(--color-bg)",
@@ -80,7 +80,7 @@ export function CartDrawer({
                     className="text-sm font-medium truncate"
                     style={{ color: "var(--color-text)" }}
                   >
-                    {item.name}
+                    {item.name} {item.variant_name ? <span className="text-xs text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded ml-1">{item.variant_name}</span> : ""}
                   </p>
                   <p
                     className="text-xs"
@@ -93,7 +93,7 @@ export function CartDrawer({
                 {/* Quantity controls */}
                 <div className="flex items-center gap-2 shrink-0">
                   <button
-                    onClick={() => onUpdateQuantity(item.menu_item_id, item.quantity - 1)}
+                    onClick={() => onUpdateQuantity(item.menu_item_id, item.variant_name, item.quantity - 1)}
                     className="w-7 h-7 rounded-lg flex items-center justify-center cursor-pointer transition-colors"
                     style={{
                       background: "var(--color-surface)",
@@ -109,7 +109,7 @@ export function CartDrawer({
                     {item.quantity}
                   </span>
                   <button
-                    onClick={() => onUpdateQuantity(item.menu_item_id, item.quantity + 1)}
+                    onClick={() => onUpdateQuantity(item.menu_item_id, item.variant_name, item.quantity + 1)}
                     className="w-7 h-7 rounded-lg flex items-center justify-center cursor-pointer transition-colors"
                     style={{
                       background: "var(--color-primary)",
@@ -121,7 +121,7 @@ export function CartDrawer({
                 </div>
 
                 <button
-                  onClick={() => onRemove(item.menu_item_id)}
+                  onClick={() => onRemove(item.menu_item_id, item.variant_name)}
                   className="p-1 rounded-lg hover:bg-red-50 cursor-pointer"
                 >
                   <X size={14} style={{ color: "var(--color-danger)" }} />

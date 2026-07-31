@@ -7,13 +7,14 @@ export interface CafeItem {
   owner_email: string;
   owner_name: string;
   created_at: string;
+  gst_number?: string;
 }
 
 export function listCafes(token: string) {
   return apiFetch<{ cafes: CafeItem[] }>("/superadmin/cafes", { token });
 }
 
-export function registerCafe(data: { cafe_name: string }, token: string) {
+export function registerCafe(data: { cafe_name: string; gst_number?: string }, token: string) {
   return apiFetch<{ status: string; cafe_id: string; restaurant_id: string }>("/superadmin/register-cafe", {
     method: "POST",
     body: JSON.stringify({ ...data, password: "temp_password_123" }), // Legacy compat, not really used if we do auto-pass, but keeping it for now

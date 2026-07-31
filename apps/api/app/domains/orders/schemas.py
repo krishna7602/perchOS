@@ -7,6 +7,7 @@ class OrderLineInput(BaseModel):
 
     menu_item_id: str
     name: str
+    variant_name: str | None = None
     price: float
     quantity: int
 

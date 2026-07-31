@@ -3,6 +3,7 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
 from app.core.security import decode_token
 from app.domains.auth.models import User, Role
+from app.domains.networking.models import CustomerProfile
 
 bearer_scheme = HTTPBearer()
 
@@ -91,3 +92,31 @@ def get_current_guest(token: str) -> dict:
         )
 
     return payload
+
+
+async def get_current_customer(
+    credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
+) -> CustomerProfile:
+    """Dependency: Extract token, verify guest role, and return CustomerProfile."""
+    try:
+        payload = decode_token(credentials.credentials)
+    except Exception:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="invalid_or_expired_token",
+        )
+
+    if payload.get("role") != "guest" or not payload.get("profile_id"):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="customer_profile_required",
+        )
+
+    profile = await CustomerProfile.get(payload["profile_id"])
+    if not profile:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="customer_profile_not_found",
+        )
+    return profile
+
