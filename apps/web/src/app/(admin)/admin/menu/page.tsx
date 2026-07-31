@@ -19,7 +19,6 @@ export default function MenuPage() {
     price: "",
     category: "",
     description: "",
-    description: "",
     is_veg: true,
     available: true,
     is_coming_soon: false

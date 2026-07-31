@@ -46,7 +46,7 @@ export function TeamChat() {
         listVenues(token).then((res) => {
           setBranches(res.venues || []);
           if (res.venues && res.venues.length > 0) {
-            const defaultBranch = res.venues[0]._id || res.venues[0].id;
+            const defaultBranch = String(res.venues[0]._id || res.venues[0].id);
             setSelectedBranch(defaultBranch);
           }
         }).catch(console.error);

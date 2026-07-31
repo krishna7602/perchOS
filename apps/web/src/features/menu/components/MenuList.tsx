@@ -12,7 +12,6 @@ interface MenuItemData {
   variants?: { name: string, price: number }[];
   category: string;
   is_veg: boolean;
-  is_veg: boolean;
   image_url?: string;
   available: boolean;
   is_coming_soon?: boolean;

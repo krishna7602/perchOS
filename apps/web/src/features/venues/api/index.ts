@@ -6,7 +6,7 @@ export function getVenueByQr(qrToken: string) {
   );
 }
 
-export function createVenue(data: { name: string; lat: number; lng: number; wifi_ssid?: string; wifi_password?: string }, token: string) {
+export function createVenue(data: { name: string; lat: number; lng: number; wifi_ssid?: string; wifi_password?: string; address?: string; phone?: string; email?: string; gst_number?: string; description?: string; }, token: string) {
   return apiFetch<{ venue: Record<string, unknown>; join_qr_png_base64: string; menu_qr_png_base64: string }>(
     "/admin/venues",
     { method: "POST", body: JSON.stringify(data), token }

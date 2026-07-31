@@ -31,8 +31,8 @@ export default function StaffAnalyticsPage() {
       const res = await getStaffList(branchId, token);
       setStaffList(res.staff || []);
       if (res.staff && res.staff.length > 0) {
-        setSelectedStaff(res.staff[0].id);
-        fetchAnalytics(res.staff[0].id);
+        setSelectedStaff(String(res.staff[0].id));
+        fetchAnalytics(String(res.staff[0].id));
       } else {
         setSelectedStaff("");
         setAnalytics(null);
