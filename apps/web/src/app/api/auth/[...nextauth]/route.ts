@@ -14,8 +14,9 @@ const handler = NextAuth({
         if (!credentials?.email || !credentials?.password) return null;
 
         try {
+          const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
           const res = await fetch(
-            `http://127.0.0.1:8000/auth/admin/login`,
+            `${apiUrl}/auth/admin/login`,
             {
               method: "POST",
               headers: { "Content-Type": "application/json" },
