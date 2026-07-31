@@ -39,9 +39,10 @@ async def room_ws(
 
     handle = claims["sub"]
     token_venue_id = claims.get("venue_id") or claims.get("branch_id")
+    role = claims.get("role")
 
-    # Ensure the token is scoped to this venue
-    if token_venue_id != venue_id:
+    # Ensure the token is scoped to this venue (or user is management)
+    if role not in ["owner", "manager", "super_admin"] and token_venue_id != venue_id:
         await websocket.close(code=4003)
         return
 
