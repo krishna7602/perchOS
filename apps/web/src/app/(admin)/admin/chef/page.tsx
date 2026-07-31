@@ -60,7 +60,17 @@ export default function ChefPortalPage() {
       }
       
       // Fetch analytics
-      const analyticsRes = await getStaffAnalytics(payload.sub, t);
+      await fetchAnalytics(payload.sub, t);
+    } catch (e) {
+      console.error(e);
+    }
+    
+    await fetchOrders();
+  };
+
+  const fetchAnalytics = async (uid: string, token: string) => {
+    try {
+      const analyticsRes = await getStaffAnalytics(uid, token);
       if (analyticsRes.data) {
         setAnalytics({
           hours: analyticsRes.data.hours_logged,
@@ -69,10 +79,8 @@ export default function ChefPortalPage() {
         });
       }
     } catch (e) {
-      console.error(e);
+      console.error("Failed to fetch analytics", e);
     }
-    
-    await fetchOrders();
   };
 
   // WebSocket for Real-time Order Assignment
@@ -209,6 +217,9 @@ export default function ChefPortalPage() {
       const t = localStorage.getItem("perch_admin_token") || "";
       await updateOrderStatus(orderId, "ready", t);
       fetchOrders();
+      if (userId) {
+        fetchAnalytics(userId, t);
+      }
     } catch (e) {
       alert("Failed to mark ready");
     }

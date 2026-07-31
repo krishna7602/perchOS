@@ -181,10 +181,11 @@ async def get_staff_analytics(
 
     # 2. Orders Prepared and Avg Time
     # Query orders assigned to this chef in the last 7 days
+    from beanie.operators import In
     orders = await Order.find(
         Order.assigned_chef_id == PydanticObjectId(user_id),
         Order.created_at >= week_ago,
-        Order.order_status == "served" # Assuming served means completed
+        In(Order.order_status, ["ready", "served"])
     ).to_list()
     
     orders_prepared = len(orders)

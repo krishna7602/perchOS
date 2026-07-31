@@ -208,7 +208,7 @@ async def update_order_status(
         raise HTTPException(status_code=400, detail="invalid_status")
 
     order.order_status = payload.order_status
-    if payload.order_status == "served":
+    if payload.order_status in ["ready", "served"] and not order.completed_at:
         from datetime import datetime
         order.completed_at = datetime.utcnow()
         
