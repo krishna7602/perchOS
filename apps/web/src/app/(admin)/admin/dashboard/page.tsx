@@ -41,31 +41,62 @@ export default function DashboardPage() {
       })
       .catch(() => setIsLoading(false));
 
-    // Connect to WebSocket to listen for order_accepted events
+    let websockets: WebSocket[] = [];
+    let venueCounts: Record<string, number> = {};
+
+    // Connect to WebSocket to listen for order_accepted and presence events across all venues
     listVenues(token).then((res) => {
       if (res.venues && res.venues.length > 0) {
-        const branchId = String(res.venues[0]._id || res.venues[0].id);
-        const ws = new WebSocket(getWsUrl(branchId, token));
-        
-        ws.onmessage = (event) => {
-          try {
-            const data = JSON.parse(event.data);
-            if (data.type === "order_accepted") {
-              const text = `Order #${data.order_id.substring(0, 6)} is now being prepared by ${data.chef_name}`;
-              const id = Date.now().toString();
-              setNotifications(prev => [...prev, { id, text }]);
-              
-              // Auto dismiss after 10s
-              setTimeout(() => {
-                setNotifications(prev => prev.filter(n => n.id !== id));
-              }, 10000);
-            }
-          } catch (e) {}
-        };
-        
-        return () => ws.close();
+        res.venues.forEach((venue: any) => {
+          const branchId = String(venue._id || venue.id);
+          const ws = new WebSocket(getWsUrl(branchId, token));
+          websockets.push(ws);
+          
+          ws.onmessage = (event) => {
+            try {
+              const msgData = JSON.parse(event.data);
+              if (msgData.type === "order_accepted") {
+                const text = `Order #${msgData.order_id.substring(0, 6)} is now being prepared by ${msgData.chef_name}`;
+                const id = Date.now().toString();
+                setNotifications(prev => [...prev, { id, text }]);
+                
+                // Auto dismiss after 10s
+                setTimeout(() => {
+                  setNotifications(prev => prev.filter(n => n.id !== id));
+                }, 10000);
+              } else if (msgData.type === "presence") {
+                venueCounts[branchId] = msgData.count;
+                
+                // Update the dashboard data state dynamically
+                setData(prev => {
+                  if (!prev) return prev;
+                  
+                  let activeRooms = 0;
+                  let totalOnline = 0;
+                  
+                  Object.values(venueCounts).forEach(count => {
+                    if (count > 0) {
+                      activeRooms += 1;
+                      totalOnline += count;
+                    }
+                  });
+                  
+                  return {
+                    ...prev,
+                    active_chat_rooms: activeRooms,
+                    total_online_users: totalOnline
+                  };
+                });
+              }
+            } catch (e) {}
+          };
+        });
       }
     });
+
+    return () => {
+      websockets.forEach(ws => ws.close());
+    };
   }, []);
 
   return (
