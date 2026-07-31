@@ -119,8 +119,8 @@ export default function MyOrdersPage() {
               let statusColor = "var(--color-muted)";
               let statusBg = "transparent";
 
-              switch (order.status) {
-                case "pending":
+              switch (order.order_status) {
+                case "received":
                   statusLabel = "Waiting to be prepared";
                   StatusIcon = Clock;
                   statusColor = "#eab308";
@@ -138,7 +138,7 @@ export default function MyOrdersPage() {
                   statusColor = "#22c55e";
                   statusBg = "#dcfce7";
                   break;
-                case "completed":
+                case "served":
                   statusLabel = "Completed";
                   StatusIcon = CheckCircle2;
                   statusColor = "var(--color-muted)";
@@ -162,7 +162,7 @@ export default function MyOrdersPage() {
                         Token Number
                       </div>
                       <div className="text-2xl font-black" style={{ fontFamily: "var(--font-heading)", color: "var(--color-primary)" }}>
-                        {order.token_number}
+                        {order.order_token || `#${((order._id || order.id) as string).slice(-6).toUpperCase()}`}
                       </div>
                     </div>
                     <div className="text-right">
