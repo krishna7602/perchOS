@@ -43,6 +43,8 @@ const navItems = [
   { href: "/admin/superadmin/cafes", label: "Super Admin", icon: Shield },
 ];
 
+import { useChatNotifier } from "@/hooks/useChatNotifier";
+
 export default function AdminLayout({
   children,
 }: {
@@ -52,6 +54,8 @@ export default function AdminLayout({
   const pathname = usePathname();
   const [adminName, setAdminName] = useState("");
   const [token, setToken] = useState("");
+
+  const { hasUnread, showPopup, popupMessage, setShowPopup } = useChatNotifier(token);
 
   const [userId, setUserId] = useState("");
   const [role, setRole] = useState("owner");
@@ -210,6 +214,9 @@ export default function AdminLayout({
               >
                 <Icon size={18} />
                 {label}
+                {label === "Team Chat" && hasUnread && (
+                  <div className="w-2 h-2 bg-yellow-500 rounded-full ml-auto animate-pulse" />
+                )}
               </Link>
             );
           })}
@@ -267,6 +274,25 @@ export default function AdminLayout({
       <main className="flex-1 overflow-y-auto w-full md:w-auto h-[calc(100vh-65px)] md:h-screen">
         {children}
       </main>
+
+      {/* Global Chat Popup */}
+      {showPopup && (
+        <div className="fixed top-4 right-4 z-[9999] bg-white border border-yellow-200 shadow-lg rounded-xl p-4 flex items-start gap-3 max-w-sm animate-in fade-in slide-in-from-top-5">
+          <div className="bg-yellow-100 p-2 rounded-full text-yellow-600 mt-0.5">
+            <MessageSquare size={16} />
+          </div>
+          <div className="flex-1 min-w-0">
+            <h4 className="text-sm font-semibold text-gray-900 mb-1">New Message</h4>
+            <p className="text-sm text-gray-600 truncate">{popupMessage}</p>
+          </div>
+          <button 
+            onClick={() => setShowPopup(false)}
+            className="text-gray-400 hover:text-gray-600 p-1"
+          >
+            <X size={16} />
+          </button>
+        </div>
+      )}
     </div>
   );
 }
