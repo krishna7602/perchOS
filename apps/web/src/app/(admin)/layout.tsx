@@ -27,6 +27,8 @@ import {
   Coffee,
   Users,
   MessageSquare,
+  Menu,
+  X
 } from "lucide-react";
 
 const navItems = [
@@ -55,6 +57,7 @@ export default function AdminLayout({
   const [role, setRole] = useState("owner");
   const [restaurantName, setRestaurantName] = useState("Admin Panel");
   const [status, setStatus] = useState("OFFLINE");
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     const t = localStorage.getItem("perch_admin_token");
@@ -91,6 +94,11 @@ export default function AdminLayout({
 
   }, [pathname, router]);
 
+  // Close mobile menu when route changes
+  useEffect(() => {
+    setIsMobileMenuOpen(false);
+  }, [pathname]);
+
   const handleLogout = () => {
     localStorage.removeItem("perch_admin_token");
     localStorage.removeItem("perch_admin_name");
@@ -115,17 +123,45 @@ export default function AdminLayout({
   }
 
   return (
-    <div className="flex min-h-screen" style={{ background: "var(--color-bg)" }}>
+    <div className="flex flex-col md:flex-row min-h-screen" style={{ background: "var(--color-bg)" }}>
+      {/* Mobile Header */}
+      <div className="md:hidden flex items-center justify-between p-4 bg-white border-b z-40 relative">
+        <div className="flex items-center gap-2">
+          <Coffee size={24} style={{ color: "var(--color-primary)" }} />
+          <span
+            className="text-lg font-bold truncate"
+            style={{ fontFamily: "var(--font-heading)", color: "var(--color-primary)" }}
+          >
+            {role === "super_admin" ? "Perch HQ" : restaurantName}
+          </span>
+        </div>
+        <button 
+          onClick={() => setIsMobileMenuOpen(true)}
+          className="p-1 rounded-md text-gray-500 hover:bg-gray-100"
+        >
+          <Menu size={24} />
+        </button>
+      </div>
+
+      {/* Mobile Sidebar Overlay */}
+      {isMobileMenuOpen && (
+        <div 
+          className="fixed inset-0 bg-black/50 z-40 md:hidden" 
+          onClick={() => setIsMobileMenuOpen(false)} 
+        />
+      )}
+
       {/* Sidebar */}
       <aside
-        className="w-64 shrink-0 flex flex-col"
+        className={`fixed md:relative inset-y-0 left-0 z-50 w-64 shrink-0 flex flex-col transition-transform duration-300 ease-in-out
+          ${isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"} md:translate-x-0 bg-white`}
         style={{
           background: "var(--color-surface)",
           borderRight: "1px solid var(--color-border)",
         }}
       >
         {/* Brand */}
-        <div className="px-5 py-5">
+        <div className="px-5 py-5 flex items-center justify-between md:block">
           <Link href="/admin/dashboard" className="flex flex-col gap-1">
             <div className="flex items-center gap-2">
               <Coffee size={24} style={{ color: "var(--color-primary)" }} />
@@ -143,6 +179,12 @@ export default function AdminLayout({
               </p>
             )}
           </Link>
+          <button 
+            className="md:hidden p-1 rounded-md text-gray-500 hover:bg-gray-100"
+            onClick={() => setIsMobileMenuOpen(false)}
+          >
+            <X size={20} />
+          </button>
         </div>
 
         {/* Nav */}
@@ -222,7 +264,7 @@ export default function AdminLayout({
       </aside>
 
       {/* Main content */}
-      <main className="flex-1 overflow-y-auto">
+      <main className="flex-1 overflow-y-auto w-full md:w-auto h-[calc(100vh-65px)] md:h-screen">
         {children}
       </main>
     </div>
