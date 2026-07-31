@@ -52,3 +52,10 @@ export function rejectOrder(orderId: string, token: string) {
     token,
   });
 }
+
+export function getBranchKitchenAnalytics(venueId: string, token: string) {
+  return apiFetch<{ status: string; data: { hours_logged: number; orders_prepared: number; avg_prep_time_mins: number } }>(
+    `/admin/orders/${venueId}/analytics`,
+    { token }
+  );
+}

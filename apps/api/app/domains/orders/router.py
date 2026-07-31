@@ -189,6 +189,45 @@ async def list_venue_orders(venue_id: str, user: User = Depends(require_kitchen)
     return {"orders": [o.model_dump(mode="json") for o in orders]}
 
 
+@router.get("/admin/orders/{venue_id}/analytics")
+async def get_branch_kitchen_analytics(venue_id: str, user: User = Depends(require_kitchen)):
+    """Admin: Get kitchen analytics for a branch."""
+    branch = await Branch.get(PydanticObjectId(venue_id))
+    if not branch or (user.role not in [Role.SUPER_ADMIN] and branch.restaurant_id != user.restaurant_id):
+        raise HTTPException(status_code=404, detail="branch_not_found")
+        
+    from datetime import datetime, timedelta
+    from beanie.operators import In
+    
+    today = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+    
+    orders = await Order.find(
+        Order.branch_id == branch.id,
+        Order.created_at >= today,
+        In(Order.order_status, ["ready", "served"])
+    ).to_list()
+    
+    orders_prepared = len(orders)
+    avg_prep_time_mins = 0
+    
+    if orders_prepared > 0:
+        total_prep_seconds = sum(
+            (o.completed_at - o.created_at).total_seconds() 
+            for o in orders 
+            if o.completed_at
+        )
+        avg_prep_time_mins = round((total_prep_seconds / orders_prepared) / 60.0, 1)
+
+    return {
+        "status": "success",
+        "data": {
+            "hours_logged": 0, # Venue level, not applicable
+            "orders_prepared": orders_prepared,
+            "avg_prep_time_mins": avg_prep_time_mins
+        }
+    }
+
+
 @router.patch("/admin/orders/{order_id}/status")
 async def update_order_status(
     order_id: str,

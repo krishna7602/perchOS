@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { updateStaffStatus, getStaffAnalytics } from "@/features/staff/api";
-import { listVenueOrders, updateOrderStatus, acceptOrder, rejectOrder } from "@/features/orders/api";
+import { listVenueOrders, updateOrderStatus, acceptOrder, rejectOrder, getBranchKitchenAnalytics } from "@/features/orders/api";
 import { listVenues } from "@/features/venues/api";
 import { getWsUrl } from "@/features/chat/api";
 import { UtensilsCrossed, Clock, CheckCircle, XCircle, MessageSquare } from "lucide-react";
@@ -21,6 +21,8 @@ const STATUS_MAP: Record<string, { label: string; icon: string; color: string }>
 export default function ChefPortalPage() {
   const [userId, setUserId] = useState("");
   const [branchId, setBranchId] = useState("");
+  const [userRole, setUserRole] = useState("chef");
+  const [branches, setBranches] = useState<any[]>([]);
   
   const [analytics, setAnalytics] = useState({ hours: 0, orders: 0, avg_time: 0 });
   const [orders, setOrders] = useState<any[]>([]);
@@ -30,37 +32,43 @@ export default function ChefPortalPage() {
 
   useEffect(() => {
     init();
-    const interval = setInterval(fetchOrders, 10000); // Poll for new orders
-    return () => clearInterval(interval);
   }, []);
+
+  useEffect(() => {
+    if (branchId) {
+      fetchOrders(); // immediate fetch on change
+      const interval = setInterval(fetchOrders, 10000);
+      return () => clearInterval(interval);
+    }
+  }, [branchId]);
 
   const init = async () => {
     const t = localStorage.getItem("perch_admin_token") || "";
     if (!t) return;
     
-    // Decode JWT for user_id
     try {
       const payloadBase64 = t.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
       const payload = JSON.parse(window.atob(payloadBase64));
       setUserId(payload.sub);
+      setUserRole(payload.role || "chef");
       
-      // Extract user's branch
-      if (payload.branch_id) {
-        setBranchId(payload.branch_id);
+      let bid = payload.branch_id;
+      if (bid) {
+        setBranchId(bid);
       } else {
-        // Fallback for owners/managers if they somehow access this page
         try {
           const res = await listVenues(t);
           if (res.venues && res.venues.length > 0) {
-            setBranchId(String(res.venues[0]._id || res.venues[0].id));
+            setBranches(res.venues);
+            bid = String(res.venues[0]._id || res.venues[0].id);
+            setBranchId(bid);
           }
         } catch (err) {
           console.warn("Could not fetch venues for branch_id fallback");
         }
       }
       
-      // Fetch analytics
-      await fetchAnalytics(payload.sub, t);
+      await fetchAnalytics(payload.sub, t, bid, payload.role || "chef");
     } catch (e) {
       console.error(e);
     }
@@ -68,9 +76,16 @@ export default function ChefPortalPage() {
     await fetchOrders();
   };
 
-  const fetchAnalytics = async (uid: string, token: string) => {
+  const fetchAnalytics = async (uid: string, token: string, bid: string = branchId, role: string = userRole) => {
     try {
-      const analyticsRes = await getStaffAnalytics(uid, token);
+      let analyticsRes;
+      if (["manager", "owner", "super_admin"].includes(role)) {
+        if (!bid) return;
+        analyticsRes = await getBranchKitchenAnalytics(bid, token);
+      } else {
+        analyticsRes = await getStaffAnalytics(uid, token);
+      }
+      
       if (analyticsRes.data) {
         setAnalytics({
           hours: analyticsRes.data.hours_logged,
@@ -225,8 +240,12 @@ export default function ChefPortalPage() {
     }
   };
 
-  // Filter orders assigned to this chef
-  const myOrders = orders.filter(o => (o.assigned_chef_id === userId) && (o.order_status !== "served"));
+  // Filter orders
+  const myOrders = orders.filter(o => {
+    if (o.order_status === "served") return false;
+    if (["manager", "owner", "super_admin"].includes(userRole)) return true;
+    return o.assigned_chef_id === userId;
+  });
   
   const pendingAcceptance = myOrders.filter(o => o.order_status === "received");
   const currentlyPreparing = myOrders.filter(o => o.order_status === "preparing");
@@ -252,6 +271,24 @@ export default function ChefPortalPage() {
             Team Chat
           </Link>
           
+          {["owner", "super_admin"].includes(userRole) && branches.length > 0 && (
+            <select
+              value={branchId}
+              onChange={(e) => {
+                const newBid = e.target.value;
+                setBranchId(newBid);
+                const token = localStorage.getItem("perch_admin_token") || "";
+                fetchAnalytics(userId, token, newBid, userRole);
+              }}
+              className="px-4 py-2 border rounded-xl outline-none text-sm font-medium bg-white shadow-sm"
+            >
+              <option value="" disabled>Select Venue</option>
+              {branches.map(b => (
+                <option key={b._id || b.id} value={String(b._id || b.id)}>{b.name}</option>
+              ))}
+            </select>
+          )}
+
           <select 
             value={currentStatus}
             onChange={(e) => handleStatusChange(e.target.value)}
