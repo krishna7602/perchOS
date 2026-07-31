@@ -44,7 +44,7 @@ export default function DashboardPage() {
     // Connect to WebSocket to listen for order_accepted events
     listVenues(token).then((res) => {
       if (res.venues && res.venues.length > 0) {
-        const branchId = res.venues[0]._id || res.venues[0].id;
+        const branchId = String(res.venues[0]._id || res.venues[0].id);
         const ws = new WebSocket(getWsUrl(branchId, token));
         
         ws.onmessage = (event) => {
