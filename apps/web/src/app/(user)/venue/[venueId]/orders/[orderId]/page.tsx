@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { getOrder } from "@/lib/api";
 import { ORDER_STATUSES, ORDER_STATUS_LABELS, ORDER_STATUS_EMOJI } from "@/lib/theme";
 import { Loader } from "@/components/ui/Loader";
 import { CheckCircle, ArrowLeft, Printer } from "lucide-react";
+import { playNotificationSound } from "@/lib/audio";
 
 export default function OrderPage() {
   const params = useParams();
@@ -16,10 +17,21 @@ export default function OrderPage() {
   const [order, setOrder] = useState<Record<string, unknown> | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
+  const prevStatus = useRef<string | null>(null);
 
   const fetchOrder = async () => {
     try {
       const data = await getOrder(orderId);
+      
+      const newStatus = data.order?.order_status as string;
+      if (prevStatus.current && newStatus && prevStatus.current !== newStatus) {
+         playNotificationSound();
+         if ("Notification" in window && Notification.permission === "granted") {
+            new Notification("Order Update", { body: `Your order is now ${newStatus}`, icon: "/favicon.ico" });
+         }
+      }
+      prevStatus.current = newStatus;
+      
       setOrder(data.order);
       setIsLoading(false);
     } catch {
@@ -29,6 +41,9 @@ export default function OrderPage() {
   };
 
   useEffect(() => {
+    if ("Notification" in window && Notification.permission === "default") {
+      Notification.requestPermission();
+    }
     fetchOrder();
     // Poll every 5 seconds for status updates
     const interval = setInterval(fetchOrder, 5000);

@@ -35,7 +35,7 @@ const navItems = [
   { href: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/admin/venues", label: "Venues", icon: Store },
   { href: "/admin/menu", label: "Menu", icon: UtensilsCrossed },
-  { href: "/admin/staff", label: "Staff", icon: Users },
+  { href: "/admin/staff", label: "Staff", icon: Users, exact: true },
   { href: "/admin/staff/analytics", label: "Staff Analytics", icon: ClipboardList },
   { href: "/admin/chat", label: "Team Chat", icon: MessageSquare },
   { href: "/admin/moderation", label: "Moderation", icon: Shield },
@@ -45,6 +45,7 @@ const navItems = [
 ];
 
 import { useChatNotifier } from "@/hooks/useChatNotifier";
+import { useOrderNotifier } from "@/hooks/useOrderNotifier";
 
 export default function AdminLayout({
   children,
@@ -57,6 +58,7 @@ export default function AdminLayout({
   const [token, setToken] = useState("");
 
   const { hasUnread, showPopup, popupMessage, setShowPopup } = useChatNotifier(token);
+  useOrderNotifier(token);
 
   const [userId, setUserId] = useState("");
   const [role, setRole] = useState("owner");
@@ -191,7 +193,7 @@ export default function AdminLayout({
 
         {/* Nav */}
         <nav className="flex-1 px-3 space-y-1">
-          {navItems.map(({ href, label, icon: Icon }) => {
+          {navItems.map(({ href, label, icon: Icon, exact }) => {
             // Role-based visibility
             if (role === "chef" && !["Dashboard", "Team Chat", "Chef Portal"].includes(label)) return null;
             if (role === "waiter" && !["Team Chat"].includes(label)) return null;
@@ -200,7 +202,7 @@ export default function AdminLayout({
             if (["owner", "manager", "super_admin"].includes(role) && label === "Chef Portal") return null;
             if (["chef", "waiter"].includes(role) && label === "Staff Analytics") return null;
 
-            const isActive = pathname.startsWith(href);
+            const isActive = exact ? pathname === href : pathname.startsWith(href);
             return (
               <Link
                 key={href}
