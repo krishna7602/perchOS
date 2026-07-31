@@ -102,6 +102,21 @@ async def create_order(payload: CreateOrderRequest):
     import asyncio
     asyncio.create_task(TaskScheduler.dispatch_order(str(order.id), str(branch.id)))
 
+    # Trigger Push Notification & WebSocket Broadcast
+    from app.domains.notifications.manager import notification_manager
+    from app.domains.chat.manager import chat_manager
+    
+    push_payload = {
+        "type": "new_order",
+        "order_id": str(order.id),
+        "order_token": order.order_token,
+        "total": order.total,
+        "venue_name": branch.name
+    }
+    
+    asyncio.create_task(notification_manager.send_push_to_branch_role(str(branch.id), "chef", push_payload))
+    asyncio.create_task(chat_manager.broadcast(str(branch.id), {"type": "system_order", "payload": push_payload}))
+
     return {
         "order": order.model_dump(mode="json"),
         "provider_order_id": payment.provider_order_id,

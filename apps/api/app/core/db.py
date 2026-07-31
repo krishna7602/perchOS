@@ -19,6 +19,7 @@ async def init_db():
     from app.domains.menu.models import MenuItem
     from app.domains.orders.models import Order, Counter, Payment
     from app.domains.chat.team_models import TeamChannel, TeamMessage
+    from app.domains.notifications.models import PushSubscription
 
     from app.domains.networking.models import CustomerProfile, ConnectionRequest, Connection, DirectMessage
 
@@ -26,7 +27,7 @@ async def init_db():
         database=db,
         document_models=[
             User, Attendance, Restaurant, Branch, MenuItem, Order, Counter, Payment, TeamChannel, TeamMessage,
-            CustomerProfile, ConnectionRequest, Connection, DirectMessage
+            CustomerProfile, ConnectionRequest, Connection, DirectMessage, PushSubscription
         ],
     )
 

@@ -30,6 +30,11 @@ class Settings(BaseSettings):
     RAZORPAY_KEY_SECRET: str = ""
     RAZORPAY_WEBHOOK_SECRET: str = ""
 
+    # Web Push
+    VAPID_PRIVATE_KEY: str = "IffaCJ9sXWNdWcm6eEoF5fi5XyTgyYzVgp4tvvlHV4A"
+    VAPID_PUBLIC_KEY: str = "BLVwMxkN5af4K0gIsdiw21vM4--G1eiq-mStLPpCyjqn0dnc6OSwGzSnmW4SpBwyct1jXGYcqtLOi_3ayWVgESQ"
+    VAPID_CLAIM_EMAIL: str = "mailto:admin@perch.com"
+
     class Config:
         env_file = "../../.env"
         extra = "ignore"

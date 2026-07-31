@@ -12,3 +12,4 @@ google-auth>=2.30.0
 redis>=5.0.0
 python-multipart>=0.0.9
 razorpay>=2.0.1
+pywebpush>=1.14.0

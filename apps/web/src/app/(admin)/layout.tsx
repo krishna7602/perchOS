@@ -45,7 +45,7 @@ const navItems = [
 ];
 
 import { useChatNotifier } from "@/hooks/useChatNotifier";
-import { useOrderNotifier } from "@/hooks/useOrderNotifier";
+import { GlobalOrderNotifier } from "@/components/GlobalOrderNotifier";
 
 export default function AdminLayout({
   children,
@@ -56,9 +56,9 @@ export default function AdminLayout({
   const pathname = usePathname();
   const [adminName, setAdminName] = useState("");
   const [token, setToken] = useState("");
+  const [venueId, setVenueId] = useState(""); // Extract venueId
 
   const { hasUnread, showPopup, popupMessage, setShowPopup } = useChatNotifier(token);
-  useOrderNotifier(token);
 
   const [userId, setUserId] = useState("");
   const [role, setRole] = useState("owner");
@@ -84,6 +84,9 @@ export default function AdminLayout({
       const payload = JSON.parse(window.atob(payloadBase64));
       setRole(payload.role || "owner");
       setUserId(payload.sub || "");
+      if (payload.branch_id || payload.venue_id) {
+        setVenueId(payload.branch_id || payload.venue_id);
+      }
       if (payload.restaurant_name) {
         setRestaurantName(payload.restaurant_name);
       }
@@ -294,6 +297,9 @@ export default function AdminLayout({
           </button>
         </div>
       )}
+
+      {/* Global Order Popup & Background Push Notifier */}
+      <GlobalOrderNotifier token={token} venueId={venueId} />
     </div>
   );
 }

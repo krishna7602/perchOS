@@ -22,6 +22,7 @@ from app.domains.networking.discovery_router import router as discovery_router
 from app.domains.networking.connections_router import router as connections_router
 from app.domains.chat.direct_router import router as direct_chat_router
 from app.routers.payments import router as payments_router
+from app.domains.notifications.router import router as notifications_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -89,3 +90,4 @@ app.include_router(discovery_router)
 app.include_router(connections_router)
 app.include_router(direct_chat_router)
 app.include_router(payments_router)
+app.include_router(notifications_router, prefix="/api/push", tags=["push"])
