@@ -36,6 +36,7 @@ const navItems = [
   { href: "/admin/venues", label: "Venues", icon: Store },
   { href: "/admin/menu", label: "Menu", icon: UtensilsCrossed },
   { href: "/admin/staff", label: "Staff", icon: Users },
+  { href: "/admin/staff/analytics", label: "Staff Analytics", icon: ClipboardList },
   { href: "/admin/chat", label: "Team Chat", icon: MessageSquare },
   { href: "/admin/moderation", label: "Moderation", icon: Shield },
   { href: "/admin/settings", label: "Settings", icon: ClipboardList },
@@ -139,11 +140,8 @@ export default function AdminLayout({
             {role === "super_admin" ? "Perch HQ" : restaurantName}
           </span>
         </div>
-        <button 
-          onClick={() => setIsMobileMenuOpen(true)}
-          className="p-1 rounded-md text-gray-500 hover:bg-gray-100"
-        >
-          <Menu size={24} />
+        <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="p-2 -mr-2">
+          <Menu size={24} style={{ color: "var(--color-text)" }} />
         </button>
       </div>
 
@@ -199,7 +197,8 @@ export default function AdminLayout({
             if (role === "waiter" && !["Team Chat"].includes(label)) return null;
             if (role === "super_admin" && !["Dashboard", "Super Admin"].includes(label)) return null;
             if (role !== "super_admin" && label === "Super Admin") return null;
-            if (role === "owner" && label === "Chef Portal") return null; // Or maybe owners can see it too? Let's hide it for owners.
+            if (["owner", "manager", "super_admin"].includes(role) && label === "Chef Portal") return null;
+            if (["chef", "waiter"].includes(role) && label === "Staff Analytics") return null;
 
             const isActive = pathname.startsWith(href);
             return (
