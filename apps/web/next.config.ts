@@ -2,8 +2,8 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   allowedDevOrigins: [
-    "cira-unfurbished-sketchingly.ngrok-free.dev",
-    "neat-sites-hang.loca.lt"
+    "perchos.shop",
+    "perch-os.vercel.app"
   ],
   async rewrites() {
     return [
