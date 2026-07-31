@@ -37,7 +37,8 @@ export function useOrderNotifier(token: string) {
 
           for (const order of orders) {
              const oid = String(order._id || order.id);
-             const currentStatus = order.order_status;
+             const currentStatus = order.order_status as string;
+             const currentTotal = order.total as number;
              
              if (!previousOrders.current[oid]) {
                 // New Order
@@ -45,7 +46,7 @@ export function useOrderNotifier(token: string) {
                 if (currentStatus === "received" && Object.keys(previousOrders.current).length > 0) {
                    showNotification = true;
                    notifTitle = `New Order Arrived!`;
-                   notifBody = `Order #${oid.substring(0, 6).toUpperCase()} at ${venue.name} for ₹${order.total}`;
+                   notifBody = `Order #${oid.substring(0, 6).toUpperCase()} at ${venue.name} for ₹${currentTotal}`;
                 }
              } else {
                 // Existing order, check status change
@@ -57,7 +58,7 @@ export function useOrderNotifier(token: string) {
                 }
              }
              
-             previousOrders.current[oid] = { status: currentStatus, total: order.total };
+             previousOrders.current[oid] = { status: currentStatus, total: currentTotal };
           }
 
           if (showNotification) {
