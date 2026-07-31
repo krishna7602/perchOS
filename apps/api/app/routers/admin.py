@@ -11,6 +11,7 @@ from pydantic import BaseModel
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 require_owner = RequireRole([Role.OWNER])
+require_management = RequireRole([Role.OWNER, Role.MANAGER, Role.SUPER_ADMIN])
 require_staff = RequireRole([Role.OWNER, Role.MANAGER, Role.CHEF, Role.WAITER])
 
 
@@ -96,7 +97,7 @@ class PaymentSettingsUpdate(BaseModel):
 
 
 @router.get("/settings/payments")
-async def get_payment_settings(user: User = Depends(require_owner)):
+async def get_payment_settings(user: User = Depends(require_management)):
     """Get the current restaurant's payment configuration."""
     if not user.restaurant_id:
         return {"error": "no_restaurant"}
@@ -113,7 +114,7 @@ async def get_payment_settings(user: User = Depends(require_owner)):
 
 
 @router.patch("/settings/payments")
-async def update_payment_settings(payload: PaymentSettingsUpdate, user: User = Depends(require_owner)):
+async def update_payment_settings(payload: PaymentSettingsUpdate, user: User = Depends(require_management)):
     """Update the restaurant's Razorpay configuration."""
     if not user.restaurant_id:
         return {"error": "no_restaurant"}

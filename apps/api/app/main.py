@@ -59,6 +59,7 @@ app.add_middleware(
         "http://localhost:3000",
         settings.PUBLIC_BASE_URL,
         "https://perchos.shop",
+        "https://www.perchos.shop",
         "https://perch-os.vercel.app",
     ],
     allow_credentials=True,
