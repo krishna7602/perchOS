@@ -25,3 +25,8 @@ class OrderStatusUpdate(BaseModel):
     """Update the status of an order (admin)."""
 
     order_status: str  # "received" | "preparing" | "ready" | "served"
+
+class VerifyPaymentRequest(BaseModel):
+    razorpay_order_id: str
+    razorpay_payment_id: str
+    razorpay_signature: str

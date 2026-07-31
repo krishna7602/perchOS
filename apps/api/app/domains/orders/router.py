@@ -7,7 +7,7 @@ from app.domains.auth.models import User, Role
 from app.services.payments.dummy_gateway import DummyGateway
 from app.services.payments.cod_gateway import CODGateway
 from app.services.payments.razorpay_gateway import RazorpayGateway
-from app.domains.orders.schemas import CreateOrderRequest, OrderStatusUpdate
+from app.domains.orders.schemas import CreateOrderRequest, OrderStatusUpdate, VerifyPaymentRequest
 from app.deps import get_current_user, RequireRole
 import re
 
