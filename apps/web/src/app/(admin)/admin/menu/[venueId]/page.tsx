@@ -87,7 +87,7 @@ export default function MenuManagePage() {
     setForm({
       name: item.name,
       description: item.description || "",
-      price: item.price.toString(),
+      price: item.price?.toString() || "0",
       category: item.category,
       is_veg: item.is_veg,
     });
