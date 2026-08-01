@@ -3,7 +3,7 @@ from beanie import PydanticObjectId
 
 from app.domains.orders.models import Order, OrderLine, Payment
 from app.domains.venues.branch_model import Branch
-from app.domains.auth.models import User, Role
+from app.domains.auth.models import User, Role, StaffStatus
 from app.services.payments.dummy_gateway import DummyGateway
 from app.services.payments.cod_gateway import CODGateway
 from app.services.payments.razorpay_gateway import RazorpayGateway
@@ -267,6 +267,43 @@ async def update_order_status(
         order.completed_at = datetime.utcnow()
         
     await order.save()
+
+    # Handle staff status updates and notifications
+    if payload.order_status == "ready":
+        if order.assigned_chef_id:
+            chef = await User.get(order.assigned_chef_id)
+            if chef:
+                chef.status = StaffStatus.AVAILABLE
+                await chef.save()
+        
+        # Notify waiters or customer
+        waiters = await User.find(User.branch_id == branch.id, User.role == Role.WAITER).to_list()
+        
+        from app.domains.notifications.manager import notification_manager
+        from app.domains.chat.manager import chat_manager
+        import asyncio
+        
+        push_payload = {
+            "type": "order_ready",
+            "order_id": str(order.id),
+            "order_token": order.order_token,
+            "message": f"Order {order.order_token} is ready for pickup."
+        }
+        
+        if waiters:
+            asyncio.create_task(notification_manager.send_push_to_branch_role(str(branch.id), "waiter", push_payload))
+            asyncio.create_task(chat_manager.broadcast(str(branch.id), {"type": "system_order", "payload": push_payload}))
+        else:
+            # No waiters, notify customer
+            asyncio.create_task(chat_manager.unicast(str(branch.id), order.customer_handle, {"type": "system_order", "payload": push_payload}))
+
+    elif payload.order_status == "served":
+        if order.assigned_waiter_id:
+            waiter = await User.get(order.assigned_waiter_id)
+            if waiter:
+                waiter.status = StaffStatus.AVAILABLE
+                await waiter.save()
+
     return {"order": order.model_dump(mode="json")}
 
 
@@ -283,6 +320,10 @@ async def accept_order(order_id: str, user: User = Depends(require_kitchen)):
     order.order_status = "preparing"
     order.assigned_chef_id = user.id
     await order.save()
+    
+    # Update chef status
+    user.status = StaffStatus.PREPARING
+    await user.save()
     
     return {"status": "success", "order": order.model_dump(mode="json")}
 
@@ -309,3 +350,26 @@ async def reject_order(order_id: str, user: User = Depends(require_kitchen)):
     asyncio.create_task(TaskScheduler.dispatch_order(str(order.id), str(branch.id)))
     
     return {"status": "success", "message": "Order rejected and rescheduled."}
+
+
+@router.post("/admin/orders/{order_id}/assign-waiter")
+async def assign_waiter(order_id: str, user: User = Depends(get_current_user)):
+    """Waiter accepts an order for pickup/delivery."""
+    if user.role not in [Role.WAITER, Role.MANAGER, Role.OWNER]:
+        raise HTTPException(status_code=403, detail="not_authorized")
+
+    order = await Order.get(PydanticObjectId(order_id))
+    if not order:
+        raise HTTPException(status_code=404, detail="order_not_found")
+        
+    branch = await Branch.get(order.branch_id)
+    if not branch or branch.restaurant_id != user.restaurant_id:
+        raise HTTPException(status_code=404, detail="branch_not_found")
+        
+    order.assigned_waiter_id = user.id
+    await order.save()
+    
+    user.status = StaffStatus.DELIVERING
+    await user.save()
+    
+    return {"status": "success", "order": order.model_dump(mode="json")}

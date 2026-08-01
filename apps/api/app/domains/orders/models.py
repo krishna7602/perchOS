@@ -34,6 +34,7 @@ class Order(Document):
     
     # Workflow
     assigned_chef_id: PydanticObjectId | None = None
+    assigned_waiter_id: PydanticObjectId | None = None
     rejected_by: list[PydanticObjectId] = Field(default_factory=list)
 
     class Settings:
