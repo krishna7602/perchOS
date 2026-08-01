@@ -290,6 +290,12 @@ async def update_order_status(
     if payload.order_status not in VALID_STATUSES:
         raise HTTPException(status_code=400, detail="invalid_status")
 
+    if payload.order_status in ["preparing", "ready"] and user.role != Role.CHEF:
+        raise HTTPException(status_code=403, detail="only_chefs_can_prepare_orders")
+        
+    if payload.order_status == "served" and user.role != Role.WAITER:
+        raise HTTPException(status_code=403, detail="only_waiters_can_serve_orders")
+
     order.order_status = payload.order_status
     if payload.order_status in ["ready", "served"] and not order.completed_at:
         from datetime import datetime
@@ -347,7 +353,7 @@ async def update_order_status(
 
 
 @router.post("/admin/orders/{order_id}/accept")
-async def accept_order(order_id: str, user: User = Depends(require_kitchen)):
+async def accept_order(order_id: str, user: User = Depends(RequireRole([Role.CHEF]))):
     order = await Order.get(PydanticObjectId(order_id))
     if not order:
         raise HTTPException(status_code=404, detail="order_not_found")
@@ -368,7 +374,7 @@ async def accept_order(order_id: str, user: User = Depends(require_kitchen)):
 
 
 @router.post("/admin/orders/{order_id}/reject")
-async def reject_order(order_id: str, user: User = Depends(require_kitchen)):
+async def reject_order(order_id: str, user: User = Depends(RequireRole([Role.CHEF]))):
     order = await Order.get(PydanticObjectId(order_id))
     if not order:
         raise HTTPException(status_code=404, detail="order_not_found")
@@ -392,10 +398,7 @@ async def reject_order(order_id: str, user: User = Depends(require_kitchen)):
 
 
 @router.post("/admin/orders/{order_id}/assign-waiter")
-async def assign_waiter(order_id: str, user: User = Depends(get_current_user)):
-    """Waiter accepts an order for pickup/delivery."""
-    if user.role not in [Role.WAITER, Role.MANAGER, Role.OWNER]:
-        raise HTTPException(status_code=403, detail="not_authorized")
+async def assign_waiter(order_id: str, user: User = Depends(RequireRole([Role.WAITER]))):
 
     order = await Order.get(PydanticObjectId(order_id))
     if not order:
