@@ -140,6 +140,10 @@ async def get_order(order_id: str):
     response["cafe_name"] = restaurant.name if restaurant else None
     response["venue_name"] = branch.name if branch else None
 
+    # Check if there are waiters in the branch
+    waiters_count = await User.find(User.branch_id == order.branch_id, User.role == Role.WAITER).count()
+    response["has_waiters"] = waiters_count > 0
+
     return {"order": response}
 
 
@@ -381,5 +385,23 @@ async def assign_waiter(order_id: str, user: User = Depends(get_current_user)):
     
     user.status = StaffStatus.DELIVERING
     await user.save()
+    
+    return {"status": "success", "order": order.model_dump(mode="json")}
+
+
+@router.post("/orders/{order_id}/self-pickup")
+async def self_pickup_order(order_id: str):
+    """Customer self-pickups the order, marking it as served."""
+    order = await Order.get(PydanticObjectId(order_id))
+    if not order:
+        raise HTTPException(status_code=404, detail="order_not_found")
+        
+    if order.order_status != "ready":
+        raise HTTPException(status_code=400, detail="order_not_ready_for_pickup")
+        
+    order.order_status = "served"
+    from datetime import datetime
+    order.completed_at = datetime.utcnow()
+    await order.save()
     
     return {"status": "success", "order": order.model_dump(mode="json")}

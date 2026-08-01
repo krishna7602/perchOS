@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { getOrder } from "@/lib/api";
+import { getOrder, selfPickupOrder } from "@/lib/api";
 import { ORDER_STATUSES, ORDER_STATUS_LABELS, ORDER_STATUS_EMOJI } from "@/lib/theme";
 import { Loader } from "@/components/ui/Loader";
 import { CheckCircle, ArrowLeft, Printer } from "lucide-react";
@@ -18,6 +18,19 @@ export default function OrderPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
   const prevStatus = useRef<string | null>(null);
+  const [isPickingUp, setIsPickingUp] = useState(false);
+
+  const handleSelfPickup = async () => {
+    setIsPickingUp(true);
+    try {
+      await selfPickupOrder(orderId);
+      await fetchOrder();
+    } catch (e) {
+      alert("Failed to complete self-pickup. Please try again.");
+    } finally {
+      setIsPickingUp(false);
+    }
+  };
 
   const fetchOrder = async () => {
     try {
@@ -191,6 +204,20 @@ export default function OrderPage() {
             })}
           </div>
         </div>
+
+        {/* Self Pickup Button */}
+        {currentStatus === "ready" && !(order as any).has_waiters && (
+          <div className="mb-6">
+            <button
+              onClick={handleSelfPickup}
+              disabled={isPickingUp}
+              className="w-full py-4 rounded-xl font-bold text-white transition-all shadow-md hover:scale-[1.01] active:scale-[0.99] flex items-center justify-center gap-2 disabled:opacity-50 disabled:pointer-events-none animate-bounce"
+              style={{ background: "var(--color-primary)" }}
+            >
+              <CheckCircle size={18} /> {isPickingUp ? "Completing..." : "I've Picked Up My Order"}
+            </button>
+          </div>
+        )}
 
         {/* Order details */}
         <div

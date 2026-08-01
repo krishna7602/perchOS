@@ -59,3 +59,9 @@ export function getBranchKitchenAnalytics(venueId: string, token: string) {
     { token }
   );
 }
+
+export function selfPickupOrder(orderId: string) {
+  return apiFetch<{ status: string; order: Record<string, unknown> }>(`/orders/${orderId}/self-pickup`, {
+    method: "POST",
+  });
+}
