@@ -28,7 +28,6 @@ export default function ChefPortalPage() {
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentStatus, setCurrentStatus] = useState("OFFLINE");
-  const [incomingOrderId, setIncomingOrderId] = useState<string | null>(null);
 
   useEffect(() => {
     init();
@@ -92,68 +91,7 @@ export default function ChefPortalPage() {
   };
 
   // WebSocket for Real-time Order Assignment
-  useEffect(() => {
-    if (!branchId || !userId) return;
-    const token = localStorage.getItem("perch_admin_token");
-    if (!token) return;
-
-    let ws: WebSocket | null = null;
-    let isConnected = false;
-
-    const connectWs = () => {
-      ws = new WebSocket(getWsUrl(branchId, token));
-
-      ws.onopen = () => {
-        isConnected = true;
-      };
-
-      ws.onmessage = (event) => {
-        try {
-          const data = JSON.parse(event.data);
-          // If this chef was specifically assigned an order
-          if (data.type === "order_assigned" && data.order_id) {
-            setIncomingOrderId(data.order_id);
-          }
-        } catch (e) {
-          console.error("WS Parse error", e);
-        }
-      };
-
-      ws.onclose = () => {
-        isConnected = false;
-        setTimeout(connectWs, 3000); // Reconnect
-      };
-    };
-
-    connectWs();
-
-    return () => {
-      if (ws) ws.close();
-    };
-  }, [branchId, userId]);
-
-  const handleAcceptOrder = async () => {
-    if (!incomingOrderId) return;
-    const token = localStorage.getItem("perch_admin_token") || "";
-    try {
-      await acceptOrder(incomingOrderId, token);
-      setIncomingOrderId(null);
-      await fetchOrders(); // Refresh to see the new order in 'preparing' state
-    } catch (err) {
-      alert("Failed to accept order");
-    }
-  };
-
-  const handleRejectOrder = async () => {
-    if (!incomingOrderId) return;
-    const token = localStorage.getItem("perch_admin_token") || "";
-    try {
-      await rejectOrder(incomingOrderId, token);
-      setIncomingOrderId(null);
-    } catch (err) {
-      alert("Failed to reject order");
-    }
-  };
+  // No page-specific WS loop needed anymore as GlobalOrderNotifier handles popups globally.
 
   const fetchOrders = async () => {
     const t = localStorage.getItem("perch_admin_token") || "";
@@ -407,36 +345,6 @@ export default function ChefPortalPage() {
         </div>
       )}
 
-      {/* Incoming Order Atomic Pop-up */}
-      {incomingOrderId && (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl text-center relative overflow-hidden">
-            <div className="absolute top-0 left-0 w-full h-2 bg-[var(--color-primary)]"></div>
-            
-            <div className="w-20 h-20 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-6 text-orange-500 animate-pulse">
-              <UtensilsCrossed size={40} />
-            </div>
-            
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">New Order Assigned!</h2>
-            <p className="text-gray-500 mb-8">The scheduler has assigned Order #{incomingOrderId.substring(0,6)} to you based on your availability.</p>
-            
-            <div className="flex gap-4">
-              <button 
-                onClick={handleRejectOrder}
-                className="flex-1 py-4 px-4 rounded-xl font-bold text-gray-600 bg-gray-100 hover:bg-gray-200 transition-colors text-lg"
-              >
-                Reject
-              </button>
-              <button 
-                onClick={handleAcceptOrder}
-                className="flex-1 py-4 px-4 rounded-xl font-bold text-white bg-[var(--color-primary)] hover:opacity-90 transition-opacity shadow-lg shadow-primary/30 text-lg"
-              >
-                Accept Order
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

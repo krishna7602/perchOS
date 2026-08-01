@@ -41,6 +41,14 @@ VALID_STATUSES = {"received", "preparing", "ready", "served"}
 
 async def dispatch_paid_order(order: Order):
     """Triggers scheduler allocation and sends push + websocket notifications to kitchen chefs."""
+    # Atomically mark as dispatched in the DB to prevent duplicate dispatches / race conditions
+    result = await Order.get_motor_collection().update_one(
+        {"_id": order.id, "is_dispatched": {"$ne": True}},
+        {"$set": {"is_dispatched": True}}
+    )
+    if result.modified_count == 0:
+        return # Already dispatched!
+
     # 1. Trigger Auto Task Allocation (Background Task)
     from app.services.scheduler import TaskScheduler
     import asyncio

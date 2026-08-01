@@ -36,6 +36,7 @@ class Order(Document):
     assigned_chef_id: PydanticObjectId | None = None
     assigned_waiter_id: PydanticObjectId | None = None
     rejected_by: list[PydanticObjectId] = Field(default_factory=list)
+    is_dispatched: bool = False
 
     class Settings:
         name = "orders"
