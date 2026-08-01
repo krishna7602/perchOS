@@ -11,6 +11,7 @@
 - **Real-Time Venue Chat**: Join a live chat room specific to the venue. Connect with other patrons, request songs, or chat with the staff.
 - **Digital Menu & Cart**: Browse the dynamic menu, add items to your cart, and place orders directly from your phone.
 - **Seamless Payments**: Support for multiple payment gateways including Razorpay and Cash on Delivery (COD).
+- **Self-Pickup Options**: Support for self-pickup if a restaurant doesn't offer table service.
 - **Live Order Tracking**: Get real-time updates on your order status directly from the kitchen.
 
 ### For Restaurants & Cafes
@@ -18,6 +19,7 @@
 - **Superadmin & Owner Dashboards**: Comprehensive analytics, staff management, and venue controls.
 - **Real-Time Kitchen Display**: Chefs receive orders instantly via WebSockets without needing to refresh.
 - **Staff Management**: Role-based access control (Owners, Managers, Chefs, Waitstaff) with time-tracking/attendance (clock-in/out) and analytics.
+- **Automated Workflows**: Automatic order assignments for Chefs and Waitstaff, including real-time push and chat notifications for order pickups.
 - **Menu Management**: Easily update items, prices, and availability across different branches.
 - **Moderation Tools**: Built-in chat moderation to maintain a safe and friendly environment in venue chat rooms.
 

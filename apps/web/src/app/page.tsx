@@ -336,7 +336,7 @@ export default function HomePage() {
             <div className="rounded-[2rem] p-10 group transition-transform hover:-translate-y-1" style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)", boxShadow: "var(--shadow-sm)" }}>
               <div className="w-12 h-12 rounded-xl flex items-center justify-center mb-6" style={{ background: "rgba(124,148,115,.1)", color: "var(--color-accent)" }}><CalendarClock size={24} /></div>
               <h3 className="text-xl font-bold mb-3">Workforce (HRMS)</h3>
-              <p className="font-medium text-sm" style={{ color: "var(--color-muted)" }}>Attendance, payroll, and ML-based staff scheduling.</p>
+              <p className="font-medium text-sm" style={{ color: "var(--color-muted)" }}>Attendance, payroll, and real-time task assignments (Chef & Waiter workflows).</p>
             </div>
 
             <div className="rounded-[2rem] p-10 group transition-transform hover:-translate-y-1" style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)", boxShadow: "var(--shadow-sm)" }}>
@@ -354,7 +354,7 @@ export default function HomePage() {
             <div className="md:w-1/2">
               <h2 className="text-4xl md:text-5xl font-black mb-6" style={{ fontFamily: "var(--font-heading)" }}>The Perfect Workflow</h2>
               <p className="text-xl text-white/80 max-w-lg mb-8 leading-relaxed font-medium">
-                Customer scans the QR. Order hits the POS. Ingredients deduct from Inventory. Prep ticket prints in the Kitchen. Revenue adds to Ledger. 
+                Customer scans the QR. Order hits the POS. Ingredients deduct from Inventory. Prep ticket prints in the Kitchen. Chef cooks, Waiter gets notified for pickup, and Revenue adds to Ledger. 
                 <br/><br/>
                 All instantly. Zero friction.
               </p>
