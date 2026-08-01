@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef } from "react";
 import { X, Check, UtensilsCrossed } from "lucide-react";
-import { getWsUrl } from "@/lib/api";
+import { getWsUrl, API_URL } from "@/lib/api";
 import { updateOrderStatus, acceptOrder, rejectOrder, assignWaiter } from "@/features/orders/api";
 
 const playNotificationSound = () => {
@@ -104,7 +104,7 @@ export function GlobalOrderNotifier({ token, venueId, role }: { token: string; v
       navigator.serviceWorker.register("/service-worker.js").then(async (registration) => {
         let subscription = await registration.pushManager.getSubscription();
         if (!subscription) {
-          const vapidRes = await fetch(process.env.NEXT_PUBLIC_API_URL + "/api/push/vapid-public-key");
+          const vapidRes = await fetch(`${API_URL}/api/push/vapid-public-key`);
           const vapidData = await vapidRes.json();
           const convertedVapidKey = urlBase64ToUint8Array(vapidData.publicKey);
 
@@ -115,7 +115,7 @@ export function GlobalOrderNotifier({ token, venueId, role }: { token: string; v
         }
         
         // Send subscription to backend
-        await fetch(process.env.NEXT_PUBLIC_API_URL + "/api/push/subscribe", {
+        await fetch(`${API_URL}/api/push/subscribe`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
