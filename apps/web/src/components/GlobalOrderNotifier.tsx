@@ -40,6 +40,11 @@ interface OrderPayload {
 export function GlobalOrderNotifier({ token, venueId, role }: { token: string; venueId: string; role: string }) {
   const [popupOrder, setPopupOrder] = useState<OrderPayload | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
+  const roleRef = useRef(role);
+
+  useEffect(() => {
+    roleRef.current = role;
+  }, [role]);
 
   useEffect(() => {
     if ("Notification" in window && Notification.permission === "default") {
@@ -59,8 +64,9 @@ export function GlobalOrderNotifier({ token, venueId, role }: { token: string; v
       ws.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);
+          const currentRole = roleRef.current;
           
-          if (role === "chef") {
+          if (currentRole === "chef") {
             if (data.type === "system_order" && data.payload && data.payload.type === "new_order") {
               setPopupOrder(data.payload);
               playNotificationSound();
@@ -76,7 +82,7 @@ export function GlobalOrderNotifier({ token, venueId, role }: { token: string; v
               playNotificationSound();
               showBrowserNotification("Order Assigned!", `Order ${orderPayload.order_token} at ${orderPayload.venue_name} for ₹${orderPayload.total}`);
             }
-          } else if (role === "waiter") {
+          } else if (currentRole === "waiter") {
             if (data.type === "system_order" && data.payload && data.payload.type === "order_ready") {
               setPopupOrder(data.payload);
               playNotificationSound();
@@ -124,7 +130,7 @@ export function GlobalOrderNotifier({ token, venueId, role }: { token: string; v
         if (event.data && event.data.type === 'order_action') {
           try {
             if (event.data.action === 'accept') {
-              if (role === "waiter") {
+              if (roleRef.current === "waiter") {
                 await assignWaiter(event.data.order_id, token);
               } else {
                 await acceptOrder(event.data.order_id, token);
@@ -153,7 +159,7 @@ export function GlobalOrderNotifier({ token, venueId, role }: { token: string; v
   const handleAccept = async () => {
     if (!popupOrder) return;
     try {
-      if (role === "waiter") {
+      if (roleRef.current === "waiter") {
         await assignWaiter(popupOrder.order_id, token);
       } else {
         await acceptOrder(popupOrder.order_id, token);
