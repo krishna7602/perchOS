@@ -11,11 +11,11 @@ class NotificationManager:
 
     async def send_push_to_branch_role(self, branch_id: str, role: str, payload: dict):
         # We need to find users who belong to this branch with the given role.
-        # But our subscriptions only store user_handle and branch_id.
-        # Ideally, we broadcast to everyone in the branch for now, or we look up branch users.
-        # For simplicity, if we subscribe tied to branch_id, we can just push to all subscriptions for this branch.
-        # A more advanced version would check the role from the Admin model.
-        subscriptions = await PushSubscription.find(PushSubscription.branch_id == branch_id).to_list()
+        # Check the role from the push subscriptions.
+        subscriptions = await PushSubscription.find(
+            PushSubscription.branch_id == branch_id,
+            PushSubscription.role == role
+        ).to_list()
         for sub in subscriptions:
             await self._send_push(sub, payload)
 

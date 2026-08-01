@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef } from "react";
 import { X, Check, UtensilsCrossed } from "lucide-react";
 import { getWsUrl } from "@/lib/api";
-import { updateOrderStatus, acceptOrder, rejectOrder } from "@/features/orders/api";
+import { updateOrderStatus, acceptOrder, rejectOrder, assignWaiter } from "@/features/orders/api";
 
 const playNotificationSound = () => {
   try {
@@ -37,7 +37,7 @@ interface OrderPayload {
   venue_name: string;
 }
 
-export function GlobalOrderNotifier({ token, venueId }: { token: string; venueId: string }) {
+export function GlobalOrderNotifier({ token, venueId, role }: { token: string; venueId: string; role: string }) {
   const [popupOrder, setPopupOrder] = useState<OrderPayload | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
 
@@ -59,20 +59,29 @@ export function GlobalOrderNotifier({ token, venueId }: { token: string; venueId
       ws.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);
-          if (data.type === "system_order" && data.payload) {
-            setPopupOrder(data.payload);
-            playNotificationSound();
-            showBrowserNotification("New Order Arrived!", `Order ${data.payload.order_token} at ${data.payload.venue_name} for ₹${data.payload.total}`);
-          } else if (data.type === "order_assigned") {
-            const orderPayload = {
-              order_id: data.order_id,
-              order_token: data.order_token,
-              total: data.total,
-              venue_name: data.venue_name || "Venue",
-            };
-            setPopupOrder(orderPayload);
-            playNotificationSound();
-            showBrowserNotification("Order Assigned!", `Order ${orderPayload.order_token} at ${orderPayload.venue_name} for ₹${orderPayload.total}`);
+          
+          if (role === "chef") {
+            if (data.type === "system_order" && data.payload && data.payload.type === "new_order") {
+              setPopupOrder(data.payload);
+              playNotificationSound();
+              showBrowserNotification("New Order Arrived!", `Order ${data.payload.order_token} at ${data.payload.venue_name} for ₹${data.payload.total}`);
+            } else if (data.type === "order_assigned") {
+              const orderPayload = {
+                order_id: data.order_id,
+                order_token: data.order_token,
+                total: data.total,
+                venue_name: data.venue_name || "Venue",
+              };
+              setPopupOrder(orderPayload);
+              playNotificationSound();
+              showBrowserNotification("Order Assigned!", `Order ${orderPayload.order_token} at ${orderPayload.venue_name} for ₹${orderPayload.total}`);
+            }
+          } else if (role === "waiter") {
+            if (data.type === "system_order" && data.payload && data.payload.type === "order_ready") {
+              setPopupOrder(data.payload);
+              playNotificationSound();
+              showBrowserNotification("Order Ready for Pickup!", `Order ${data.payload.order_token} is ready for pickup.`);
+            }
           }
         } catch (e) {}
       };
@@ -115,7 +124,11 @@ export function GlobalOrderNotifier({ token, venueId }: { token: string; venueId
         if (event.data && event.data.type === 'order_action') {
           try {
             if (event.data.action === 'accept') {
-              await acceptOrder(event.data.order_id, token);
+              if (role === "waiter") {
+                await assignWaiter(event.data.order_id, token);
+              } else {
+                await acceptOrder(event.data.order_id, token);
+              }
             } else if (event.data.action === 'reject') {
               await rejectOrder(event.data.order_id, token);
             }
@@ -140,7 +153,11 @@ export function GlobalOrderNotifier({ token, venueId }: { token: string; venueId
   const handleAccept = async () => {
     if (!popupOrder) return;
     try {
-      await acceptOrder(popupOrder.order_id, token);
+      if (role === "waiter") {
+        await assignWaiter(popupOrder.order_id, token);
+      } else {
+        await acceptOrder(popupOrder.order_id, token);
+      }
       setPopupOrder(null);
     } catch (e) {
       console.error(e);

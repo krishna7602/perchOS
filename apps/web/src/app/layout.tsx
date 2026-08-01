@@ -4,6 +4,7 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "Perch — Pull Up a Seat",
   description: "Scan a QR, join the conversation, browse the menu, and order — all from your phone.",
+  manifest: "/manifest.json",
 };
 
 export default function RootLayout({

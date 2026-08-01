@@ -1,19 +1,35 @@
 self.addEventListener('push', function(event) {
   if (event.data) {
     const data = event.data.json();
+    let title = 'New Order Arrived!';
+    let body = `Order ${data.order_token} for ₹${data.total || 0}`;
+    let actions = [];
+
+    if (data.type === 'new_order') {
+      title = 'New Order Arrived!';
+      body = `Order ${data.order_token} for ₹${data.total}`;
+      actions = [
+        { action: 'accept', title: 'Accept Order' },
+        { action: 'reject', title: 'Reject Order' }
+      ];
+    } else if (data.type === 'order_ready') {
+      title = 'Order Ready for Pickup!';
+      body = data.message || `Order ${data.order_token} is ready for pickup.`;
+      actions = [
+        { action: 'accept', title: 'Accept' }
+      ];
+    }
+
     const options = {
-      body: `Order ${data.order_token} for ₹${data.total}`,
+      body: body,
       icon: '/favicon.ico',
       vibrate: [200, 100, 200, 100, 200, 100, 200],
       requireInteraction: true,
       data: data,
-      actions: [
-        { action: 'accept', title: 'Accept Order' },
-        { action: 'reject', title: 'Reject Order' }
-      ]
+      actions: actions
     };
     event.waitUntil(
-      self.registration.showNotification('New Order Arrived!', options)
+      self.registration.showNotification(title, options)
     );
   }
 });

@@ -24,18 +24,21 @@ async def subscribe_to_push(
 ):
     handle = str(user.id)
     branch_id = str(user.branch_id) if user.branch_id else None
+    role = user.role.value
 
     # Check if exists
     existing = await PushSubscription.find_one(PushSubscription.endpoint == sub_data.endpoint)
     if existing:
         existing.user_handle = handle
         existing.branch_id = branch_id
+        existing.role = role
         existing.keys = sub_data.keys
         await existing.save()
     else:
         new_sub = PushSubscription(
             user_handle=handle,
             branch_id=branch_id,
+            role=role,
             endpoint=sub_data.endpoint,
             keys=sub_data.keys
         )

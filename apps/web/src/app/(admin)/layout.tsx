@@ -299,7 +299,7 @@ export default function AdminLayout({
       )}
 
       {/* Global Order Popup & Background Push Notifier */}
-      <GlobalOrderNotifier token={token} venueId={venueId} />
+      <GlobalOrderNotifier token={token} venueId={venueId} role={role} />
     </div>
   );
 }

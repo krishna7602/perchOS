@@ -65,3 +65,10 @@ export function selfPickupOrder(orderId: string) {
     method: "POST",
   });
 }
+
+export function assignWaiter(orderId: string, token: string) {
+  return apiFetch<{ status: string; order: Record<string, unknown> }>(`/admin/orders/${orderId}/assign-waiter`, {
+    method: "POST",
+    token,
+  });
+}
