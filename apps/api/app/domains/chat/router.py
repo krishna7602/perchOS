@@ -125,9 +125,10 @@ async def room_ws(
                 )
 
     except WebSocketDisconnect:
-        chat_manager.disconnect(venue_id, handle)
-        await chat_manager.broadcast(
-            venue_id,
-            {"type": "system", "body": f"{handle} left the room"},
-        )
-        await chat_manager.broadcast_presence(venue_id)
+        is_completely_disconnected = chat_manager.disconnect(venue_id, handle, websocket)
+        if is_completely_disconnected:
+            await chat_manager.broadcast(
+                venue_id,
+                {"type": "system", "body": f"{handle} left the room"},
+            )
+            await chat_manager.broadcast_presence(venue_id)

@@ -79,12 +79,19 @@ class TaskScheduler:
             print(f"[Scheduler] Assigned Order {order.id} to Chef {best_chef.name} (Score: {lowest_score})")
             
             # Trigger WebSocket popup for the Chef
+            from app.domains.venues.branch_model import Branch
+            branch = await Branch.get(PydanticObjectId(branch_id))
+            branch_name = branch.name if branch else "Venue"
+
             from app.domains.chat.manager import chat_manager
             await chat_manager.unicast(
                 branch_id, 
                 str(best_chef.id), 
                 {
                     "type": "order_assigned", 
-                    "order_id": str(order.id)
+                    "order_id": str(order.id),
+                    "order_token": order.order_token,
+                    "total": order.total,
+                    "venue_name": branch_name
                 }
             )

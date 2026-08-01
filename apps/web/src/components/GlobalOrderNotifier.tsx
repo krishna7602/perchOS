@@ -24,6 +24,12 @@ const playNotificationSound = () => {
   } catch (e) {}
 };
 
+const showBrowserNotification = (title: string, body: string) => {
+  if ("Notification" in window && Notification.permission === "granted") {
+    new Notification(title, { body, icon: "/favicon.ico" });
+  }
+};
+
 interface OrderPayload {
   order_id: string;
   order_token: string;
@@ -34,6 +40,12 @@ interface OrderPayload {
 export function GlobalOrderNotifier({ token, venueId }: { token: string; venueId: string }) {
   const [popupOrder, setPopupOrder] = useState<OrderPayload | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
+
+  useEffect(() => {
+    if ("Notification" in window && Notification.permission === "default") {
+      Notification.requestPermission();
+    }
+  }, []);
 
   useEffect(() => {
     if (!token || !venueId) return;
@@ -50,6 +62,17 @@ export function GlobalOrderNotifier({ token, venueId }: { token: string; venueId
           if (data.type === "system_order" && data.payload) {
             setPopupOrder(data.payload);
             playNotificationSound();
+            showBrowserNotification("New Order Arrived!", `Order ${data.payload.order_token} at ${data.payload.venue_name} for ₹${data.payload.total}`);
+          } else if (data.type === "order_assigned") {
+            const orderPayload = {
+              order_id: data.order_id,
+              order_token: data.order_token,
+              total: data.total,
+              venue_name: data.venue_name || "Venue",
+            };
+            setPopupOrder(orderPayload);
+            playNotificationSound();
+            showBrowserNotification("Order Assigned!", `Order ${orderPayload.order_token} at ${orderPayload.venue_name} for ₹${orderPayload.total}`);
           }
         } catch (e) {}
       };
