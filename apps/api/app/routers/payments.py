@@ -47,9 +47,15 @@ async def razorpay_webhook(request: Request, x_razorpay_signature: str = Header(
     payment.provider_payment_id = rp_payment.get("id")
     await payment.save()
 
+    already_paid = (order.payment_status == "paid")
     order.payment_status = payment.status
     if payment.status == "paid":
         order.order_status = "received"  # kitchen can start
     await order.save()
+
+    if payment.status == "paid" and not already_paid:
+        from app.domains.orders.router import dispatch_paid_order
+        import asyncio
+        asyncio.create_task(dispatch_paid_order(order))
 
     return {"ok": True}

@@ -39,6 +39,33 @@ GATEWAYS = {
 VALID_STATUSES = {"received", "preparing", "ready", "served"}
 
 
+async def dispatch_paid_order(order: Order):
+    """Triggers scheduler allocation and sends push + websocket notifications to kitchen chefs."""
+    # 1. Trigger Auto Task Allocation (Background Task)
+    from app.services.scheduler import TaskScheduler
+    import asyncio
+    asyncio.create_task(TaskScheduler.dispatch_order(str(order.id), str(order.branch_id)))
+
+    # 2. Trigger Push Notification & WebSocket Broadcast
+    from app.domains.notifications.manager import notification_manager
+    from app.domains.chat.manager import chat_manager
+    from app.domains.venues.branch_model import Branch
+    
+    branch = await Branch.get(order.branch_id)
+    venue_name = branch.name if branch else "Venue"
+    
+    push_payload = {
+        "type": "new_order",
+        "order_id": str(order.id),
+        "order_token": order.order_token,
+        "total": order.total,
+        "venue_name": venue_name
+    }
+    
+    asyncio.create_task(notification_manager.send_push_to_branch_role(str(order.branch_id), "chef", push_payload))
+    asyncio.create_task(chat_manager.broadcast(str(order.branch_id), {"type": "system_order", "payload": push_payload}))
+
+
 @router.post("/orders")
 async def create_order(payload: CreateOrderRequest):
     """Create a new order and process payment."""
@@ -97,25 +124,9 @@ async def create_order(payload: CreateOrderRequest):
     order.payment_status = "paid" if result["status"] == "paid" else result["status"]
     await order.save()
 
-    # Trigger Auto Task Allocation (Background Task)
-    from app.services.scheduler import TaskScheduler
-    import asyncio
-    asyncio.create_task(TaskScheduler.dispatch_order(str(order.id), str(branch.id)))
-
-    # Trigger Push Notification & WebSocket Broadcast
-    from app.domains.notifications.manager import notification_manager
-    from app.domains.chat.manager import chat_manager
-    
-    push_payload = {
-        "type": "new_order",
-        "order_id": str(order.id),
-        "order_token": order.order_token,
-        "total": order.total,
-        "venue_name": branch.name
-    }
-    
-    asyncio.create_task(notification_manager.send_push_to_branch_role(str(branch.id), "chef", push_payload))
-    asyncio.create_task(chat_manager.broadcast(str(branch.id), {"type": "system_order", "payload": push_payload}))
+    if order.payment_status == "paid" or order.payment_method == "cod":
+        import asyncio
+        asyncio.create_task(dispatch_paid_order(order))
 
     return {
         "order": order.model_dump(mode="json"),
@@ -186,11 +197,17 @@ async def verify_payment(order_id: str, payload: VerifyPaymentRequest):
     payment.provider_payment_id = payload.razorpay_payment_id
     await payment.save()
     
+    already_paid = (order.payment_status == "paid")
+
     order.payment_status = "paid"
     order.order_status = "received"
     await order.save()
     
-    return {"ok": True, "order": order.dict()}
+    if not already_paid:
+        import asyncio
+        asyncio.create_task(dispatch_paid_order(order))
+    
+    return {"ok": True, "order": order.model_dump(mode="json")}
 
 
 @router.get("/admin/orders/{venue_id}")
