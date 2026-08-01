@@ -271,10 +271,15 @@ async def update_order_status(
     # Handle staff status updates and notifications
     if payload.order_status == "ready":
         if order.assigned_chef_id:
-            chef = await User.get(order.assigned_chef_id)
-            if chef:
-                chef.status = StaffStatus.AVAILABLE
-                await chef.save()
+            active_orders = await Order.find(
+                Order.assigned_chef_id == order.assigned_chef_id,
+                Order.order_status == "preparing"
+            ).to_list()
+            if not active_orders:
+                chef = await User.get(order.assigned_chef_id)
+                if chef:
+                    chef.status = StaffStatus.AVAILABLE
+                    await chef.save()
         
         # Notify waiters or customer
         waiters = await User.find(User.branch_id == branch.id, User.role == Role.WAITER).to_list()
@@ -299,10 +304,15 @@ async def update_order_status(
 
     elif payload.order_status == "served":
         if order.assigned_waiter_id:
-            waiter = await User.get(order.assigned_waiter_id)
-            if waiter:
-                waiter.status = StaffStatus.AVAILABLE
-                await waiter.save()
+            active_orders = await Order.find(
+                Order.assigned_waiter_id == order.assigned_waiter_id,
+                Order.order_status != "served"
+            ).to_list()
+            if not active_orders:
+                waiter = await User.get(order.assigned_waiter_id)
+                if waiter:
+                    waiter.status = StaffStatus.AVAILABLE
+                    await waiter.save()
 
     return {"order": order.model_dump(mode="json")}
 
