@@ -8,14 +8,16 @@ import { getWsUrl } from "@/features/chat/api";
 import { UtensilsCrossed, Clock, CheckCircle, XCircle, MessageSquare } from "lucide-react";
 import Link from "next/link";
 
+import { getMe } from "@/features/auth/api";
+
 const STATUS_MAP: Record<string, { label: string; icon: string; color: string }> = {
   AVAILABLE: { label: "Available", icon: "🟢", color: "text-green-600" },
-  BUSY: { label: "Busy", icon: "🟡", color: "text-yellow-600" },
+  BUSY: { label: "Busy", icon: "🔴", color: "text-red-600" },
   BREAK: { label: "Break", icon: "🔵", color: "text-blue-600" },
   OFFLINE: { label: "Offline", icon: "🔴", color: "text-gray-500" },
-  PREPARING: { label: "Preparing", icon: "🍽", color: "text-orange-600" },
-  CLEANING: { label: "Cleaning", icon: "🧹", color: "text-teal-600" },
-  NEED_HELP: { label: "Need Help", icon: "⚠", color: "text-red-600" },
+  PREPARING: { label: "Preparing", icon: "🔴", color: "text-red-600" },
+  CLEANING: { label: "Cleaning", icon: "🔴", color: "text-red-600" },
+  NEED_HELP: { label: "Need Help", icon: "🔴", color: "text-red-600" },
 };
 
 export default function ChefPortalPage() {
@@ -32,6 +34,19 @@ export default function ChefPortalPage() {
   useEffect(() => {
     init();
   }, []);
+
+  useEffect(() => {
+    const t = localStorage.getItem("perch_admin_token") || "";
+    if (!t) return;
+    const interval = setInterval(() => {
+      getMe(t).then(res => {
+        if (res.status && res.status !== currentStatus) {
+          setCurrentStatus(res.status);
+        }
+      }).catch(console.error);
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [currentStatus]);
 
   useEffect(() => {
     if (branchId) {
@@ -68,6 +83,16 @@ export default function ChefPortalPage() {
       }
       
       await fetchAnalytics(payload.sub, t);
+
+      // Fetch current status
+      try {
+        const me = await getMe(t);
+        if (me.status) {
+          setCurrentStatus(me.status);
+        }
+      } catch (err) {
+        console.error("Failed to fetch initial status", err);
+      }
     } catch (e) {
       console.error(e);
     }

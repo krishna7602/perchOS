@@ -8,14 +8,14 @@ import { updateStaffStatus } from "@/features/staff/api";
 
 const STATUS_MAP: Record<string, { label: string; icon: string; color: string }> = {
   AVAILABLE: { label: "Available", icon: "🟢", color: "text-green-600" },
-  BUSY: { label: "Busy", icon: "🟡", color: "text-yellow-600" },
+  BUSY: { label: "Busy", icon: "🔴", color: "text-red-600" },
   BREAK: { label: "Break", icon: "🔵", color: "text-blue-600" },
   OFFLINE: { label: "Offline", icon: "🔴", color: "text-gray-500" },
-  PREPARING: { label: "Preparing", icon: "🍽", color: "text-orange-600" },
-  DELIVERING: { label: "Delivering", icon: "🚚", color: "text-purple-600" },
+  PREPARING: { label: "Preparing", icon: "🔴", color: "text-red-600" },
+  DELIVERING: { label: "Delivering", icon: "🔴", color: "text-red-600" },
   CLEANING: { label: "Cleaning", icon: "🧹", color: "text-teal-600" },
   INVENTORY: { label: "Inventory", icon: "📦", color: "text-amber-600" },
-  NEED_HELP: { label: "Need Help", icon: "⚠", color: "text-red-600" },
+  NEED_HELP: { label: "Need Help", icon: "🔴", color: "text-red-600" },
 };
 import {
   LayoutDashboard,
@@ -108,6 +108,19 @@ export default function AdminLayout({
   useEffect(() => {
     setIsMobileMenuOpen(false);
   }, [pathname]);
+
+  // Poll user status periodically to sync with DB workflow changes in real-time
+  useEffect(() => {
+    if (!token) return;
+    const interval = setInterval(() => {
+      getMe(token).then(res => {
+        if (res.status && res.status !== status) {
+          setStatus(res.status);
+        }
+      }).catch(console.error);
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [token, status]);
 
   const handleLogout = () => {
     localStorage.removeItem("perch_admin_token");
