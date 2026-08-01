@@ -103,12 +103,7 @@ export default function HomePage() {
           <div className="w-full px-6 lg:px-12 xl:px-20 max-w-[1800px] mx-auto h-20 flex items-center justify-between">
             {/* Logo */}
             <Link href="/" className="flex items-center gap-3">
-              <div
-                className="w-10 h-10 rounded-xl flex items-center justify-center"
-                style={{ background: "var(--color-primary)", color: "white" }}
-              >
-                <Coffee size={20} />
-              </div>
+              <img src="/logo.png" className="w-10 h-10 rounded-xl object-cover shadow-sm" alt="Perch Logo" />
               <div>
                 <h2
                   className="text-xl font-black leading-none tracking-tight"

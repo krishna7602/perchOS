@@ -137,7 +137,7 @@ export default function AdminLayout({
       {/* Mobile Header */}
       <div className="md:hidden flex items-center justify-between p-4 bg-white border-b z-40 relative">
         <div className="flex items-center gap-2">
-          <Coffee size={24} style={{ color: "var(--color-primary)" }} />
+          <img src="/logo.png" className="w-8 h-8 rounded-lg object-cover" alt="Perch Logo" />
           <span
             className="text-lg font-bold truncate"
             style={{ fontFamily: "var(--font-heading)", color: "var(--color-primary)" }}
@@ -171,7 +171,7 @@ export default function AdminLayout({
         <div className="px-5 py-5 flex items-center justify-between md:block">
           <Link href="/admin/dashboard" className="flex flex-col gap-1">
             <div className="flex items-center gap-2">
-              <Coffee size={24} style={{ color: "var(--color-primary)" }} />
+              <img src="/logo.png" className="w-8 h-8 rounded-lg object-cover" alt="Perch Logo" />
               <span
                 className="text-xl font-bold truncate"
                 style={{ fontFamily: "var(--font-heading)", color: "var(--color-primary)" }}

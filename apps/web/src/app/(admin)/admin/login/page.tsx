@@ -37,10 +37,10 @@ export default function AdminLoginPage() {
       <div className="w-full max-w-sm animate-fade-in">
         {/* Brand */}
         <div className="text-center mb-8">
-          <Coffee
-            size={40}
-            className="mx-auto mb-3"
-            style={{ color: "var(--color-primary)" }}
+          <img
+            src="/logo.png"
+            className="w-16 h-16 rounded-2xl object-cover mx-auto mb-3 shadow-lg"
+            alt="Perch Logo"
           />
           <h1
             className="text-3xl font-bold mb-1"
