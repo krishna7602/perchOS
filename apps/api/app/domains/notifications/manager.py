@@ -1,17 +1,20 @@
 import json
+import asyncio
 from pywebpush import webpush, WebPushException
 from app.core.config import settings
 from app.domains.notifications.models import PushSubscription
 
 class NotificationManager:
     async def send_push_to_user(self, handle: str, payload: dict):
+        if not handle:
+            return
         subscriptions = await PushSubscription.find(PushSubscription.user_handle == handle).to_list()
         for sub in subscriptions:
             await self._send_push(sub, payload)
 
     async def send_push_to_branch_role(self, branch_id: str, role: str, payload: dict):
-        # We need to find users who belong to this branch with the given role.
-        # Check the role from the push subscriptions.
+        if not branch_id or not role:
+            return
         subscriptions = await PushSubscription.find(
             PushSubscription.branch_id == branch_id,
             PushSubscription.role == role
@@ -25,19 +28,31 @@ class NotificationManager:
                 "endpoint": subscription.endpoint,
                 "keys": subscription.keys
             }
-            webpush(
-                subscription_info=sub_info,
-                data=json.dumps(payload),
-                vapid_private_key=settings.VAPID_PRIVATE_KEY,
-                vapid_claims={
-                    "sub": settings.VAPID_CLAIM_EMAIL
-                }
-            )
+            if not settings.VAPID_PRIVATE_KEY:
+                return
+
+            def _do_webpush():
+                webpush(
+                    subscription_info=sub_info,
+                    data=json.dumps(payload),
+                    vapid_private_key=settings.VAPID_PRIVATE_KEY,
+                    vapid_claims={
+                        "sub": settings.VAPID_CLAIM_EMAIL or "mailto:admin@perch.com"
+                    }
+                )
+
+            await asyncio.to_thread(_do_webpush)
         except WebPushException as ex:
-            if ex.response and ex.response.status_code in [404, 410]:
+            if hasattr(ex, "response") and ex.response and getattr(ex.response, "status_code", None) in [404, 410]:
                 # Subscription has expired or is no longer valid
-                await subscription.delete()
+                try:
+                    await subscription.delete()
+                except Exception:
+                    pass
             else:
                 print(f"Web Push Error: {ex}")
+        except Exception as ex:
+            print(f"Web Push Unexpected Error: {ex}")
 
 notification_manager = NotificationManager()
+

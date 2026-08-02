@@ -165,8 +165,13 @@ export function GlobalOrderNotifier({ token, venueId, role }: { token: string; v
         await acceptOrder(popupOrder.order_id, token);
       }
       setPopupOrder(null);
-    } catch (e) {
-      console.error(e);
+    } catch (e: any) {
+      if (e?.status === 409) {
+        alert("This order has already been accepted by another team member.");
+      } else {
+        console.error("Failed to accept order:", e);
+      }
+      setPopupOrder(null);
     }
   };
 

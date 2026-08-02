@@ -168,8 +168,13 @@ export default function ChefPortalPage() {
       const t = localStorage.getItem("perch_admin_token") || "";
       await acceptOrder(orderId, t);
       fetchOrders();
-    } catch (e) {
-      alert("Failed to accept");
+    } catch (e: any) {
+      if (e?.status === 409) {
+        alert("This order was already accepted by another chef.");
+      } else {
+        alert("Failed to accept order.");
+      }
+      fetchOrders();
     }
   };
 
