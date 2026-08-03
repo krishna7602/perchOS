@@ -1,8 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import { Suspense } from "react";
 
 function GoogleCallbackContent() {
   const searchParams = useSearchParams();
@@ -104,7 +103,7 @@ function GoogleCallbackContent() {
               </svg>
             </div>
             <p className="text-lg font-semibold text-gray-800">Signed in!</p>
-            <p className="text-sm text-gray-500 mt-1">This window will close automatically.</p>
+            <p className="text-sm text-gray-500 mt-1">Redirecting to venue...</p>
           </>
         )}
         {status === "error" && (
@@ -117,10 +116,16 @@ function GoogleCallbackContent() {
             <p className="text-lg font-semibold text-red-800">Sign-in failed</p>
             <p className="text-sm text-gray-500 mt-1">{errorMsg}</p>
             <button
-              onClick={() => window.close()}
+              onClick={() => {
+                if (window.opener) {
+                  window.close();
+                } else {
+                  window.location.href = "/";
+                }
+              }}
               className="mt-4 px-4 py-2 bg-amber-500 text-white rounded-lg text-sm font-medium hover:bg-amber-600 transition-colors cursor-pointer"
             >
-              Close
+              Back to Home
             </button>
           </>
         )}

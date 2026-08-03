@@ -157,7 +157,7 @@ function JoinPageContent() {
       process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ||
       "325995682940-n5v4mpl5v8kijcabe8l8jnkv1cojknt9.apps.googleusercontent.com";
 
-    const redirectUri = `${window.location.origin}/auth/google/callback`;
+    const redirectUri = `${window.location.origin}/api/auth/callback/google`;
     const scope = "openid email profile";
     const state = qrToken;
     const authUrl =
