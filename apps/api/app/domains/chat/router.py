@@ -48,6 +48,16 @@ async def send_venue_message(
     return {"status": "success", "message_id": str(msg.id)}
 
 
+def json_safe(val):
+    if hasattr(val, "__str__") and type(val).__name__ in ("PydanticObjectId", "ObjectId"):
+        return str(val)
+    if isinstance(val, dict):
+        return {k: json_safe(v) for k, v in val.items()}
+    if isinstance(val, list):
+        return [json_safe(x) for x in val]
+    return val
+
+
 @router.get("/chat/{venue_id}/messages")
 async def get_venue_messages(
     venue_id: str,
@@ -124,8 +134,8 @@ async def get_venue_messages(
             "content": msg.content,
             "created_at": msg.created_at.isoformat(),
             "edited": msg.edited_at is not None,
-            "reactions": msg.reactions,
-            "replies": msg.replies,
+            "reactions": json_safe(msg.reactions),
+            "replies": json_safe(msg.replies),
         })
 
     return {"messages": response_messages}

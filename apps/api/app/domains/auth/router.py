@@ -330,5 +330,21 @@ async def customer_onboarding(
             sl.website = cleaned_links.get("website", sl.website)
             await sl.save()
 
-    return {"status": "success", "profile": customer}
+    mode_val = customer.networking_mode.value if isinstance(customer.networking_mode, Enum) else str(customer.networking_mode)
+
+    return {
+        "status": "success",
+        "profile": {
+            "id": str(customer.id),
+            "username": customer.username,
+            "display_name": customer.display_name,
+            "headline": customer.headline,
+            "company": customer.company,
+            "college": customer.college,
+            "interests": customer.interests,
+            "professional_tags": customer.professional_tags,
+            "networking_mode": mode_val,
+            "onboarding_completed": customer.onboarding_completed,
+        }
+    }
 

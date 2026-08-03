@@ -25,10 +25,24 @@ class ProfileUpdateRequest(BaseModel):
     is_visible: bool | None = None
 
 
+def serialize_profile(profile: CustomerProfile) -> dict:
+    p_dict = profile.model_dump()
+    p_dict["id"] = str(profile.id)
+    if profile.account_id:
+        p_dict["account_id"] = str(profile.account_id)
+    if profile.current_venue_id:
+        p_dict["current_venue_id"] = str(profile.current_venue_id)
+    p_dict["recent_visits"] = [str(v) for v in profile.recent_visits]
+    p_dict["connections"] = [str(c) for c in profile.connections]
+    p_dict["favorite_cafes"] = [str(f) for f in profile.favorite_cafes]
+    p_dict["blocked_users"] = [str(b) for b in profile.blocked_users]
+    return p_dict
+
+
 @router.get("/me")
 async def get_my_profile(customer: CustomerProfile = Depends(get_current_customer)):
     """Fetch the current authenticated customer's profile."""
-    return customer
+    return serialize_profile(customer)
 
 
 @router.put("/me")
@@ -43,7 +57,7 @@ async def update_my_profile(
         setattr(customer, key, value)
         
     await customer.save()
-    return customer
+    return serialize_profile(customer)
 
 
 class VisibilityToggleRequest(BaseModel):
