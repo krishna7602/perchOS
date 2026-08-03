@@ -2,6 +2,7 @@ from beanie import Document, PydanticObjectId, Indexed
 from pydantic import BaseModel, Field
 from datetime import datetime
 from enum import Enum
+import uuid
 
 
 class NetworkingMode(str, Enum):
@@ -79,11 +80,11 @@ class ProfessionalTag(Document):
 
 class CustomerProfile(Document):
     """The networking profile for a customer."""
-    account_id: PydanticObjectId
-    uuid: Indexed(str, unique=True)  # type: ignore
-    username: Indexed(str, unique=True)  # type: ignore
-    display_name: str
-    email: Indexed(str)  # type: ignore
+    account_id: PydanticObjectId | None = None
+    uuid: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    username: str = Field(default_factory=lambda: f"user_{str(uuid.uuid4())[:8]}")
+    display_name: str = "Guest User"
+    email: str | None = None
     profile_photo: str | None = None
     headline: str | None = None
     bio: str | None = None
