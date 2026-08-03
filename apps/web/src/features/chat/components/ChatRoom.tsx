@@ -465,6 +465,7 @@ export function ChatRoom({
       <OnlineUsersBar
         users={onlineUsers}
         currentUser={handle}
+        activeProfiles={activeProfiles}
         onUserClick={handleUserClick}
       />
 
