@@ -212,6 +212,13 @@ export default function JoinPage() {
     const activeToken = authToken || sessionStorage.getItem("perch_chat_token") || "";
     const targetVenueId = venue?.id || sessionStorage.getItem("perch_venue_id") || "";
 
+    if (!activeToken) {
+      setError("Session expired. Please click Continue with Google to sign in again.");
+      setIsSubmitting(false);
+      setStep("login");
+      return;
+    }
+
     try {
       if (!isSkipped) {
         const cleanedSocialLinks = {
@@ -237,9 +244,10 @@ export default function JoinPage() {
       }
 
       setStep("joining");
-      router.push(`/venue/${targetVenueId}/chat`);
+      const destination = targetVenueId ? `/venue/${targetVenueId}/chat` : "/";
+      router.push(destination);
     } catch (err: any) {
-      console.error("Onboarding error:", err);
+      console.error("Onboarding submit error:", err);
       setError(err?.detail || err?.message || "Failed to save profile. Please try again.");
       setIsSubmitting(false);
     }
@@ -522,12 +530,20 @@ export default function JoinPage() {
               </div>
             </div>
 
+            {/* Error Feedback */}
+            {error && (
+              <div className="p-3 rounded-xl bg-red-50 text-red-600 border border-red-200 text-xs font-semibold text-center">
+                {error}
+              </div>
+            )}
+
             {/* Submits */}
             <div className="flex gap-3 pt-2">
               <button
                 type="button"
                 onClick={() => handleOnboardingSubmit(true)}
-                className="flex-1 py-3 px-4 rounded-xl text-xs font-bold border border-gray-200 bg-gray-50 text-gray-500 hover:bg-gray-100 transition-all cursor-pointer"
+                disabled={isSubmitting}
+                className="flex-1 py-3 px-4 rounded-xl text-xs font-bold border border-gray-200 bg-gray-50 text-gray-500 hover:bg-gray-100 transition-all cursor-pointer disabled:opacity-50"
               >
                 Skip Onboarding
               </button>
@@ -537,7 +553,7 @@ export default function JoinPage() {
                 disabled={isSubmitting}
                 className="flex-1 py-3 px-4 rounded-xl text-xs font-bold text-white transition-all cursor-pointer shadow-md bg-amber-500 hover:bg-amber-600 disabled:opacity-50 flex items-center justify-center gap-1.5"
               >
-                Save & Continue <ChevronRight size={14} />
+                {isSubmitting ? "Saving..." : "Save & Continue"} <ChevronRight size={14} />
               </button>
             </div>
           </div>
@@ -557,7 +573,7 @@ export default function JoinPage() {
       )}
 
       {/* Footer Branding */}
-      <footer className="text-center text-[10px] text-gray-400 mt-6 select-none">
+      <footer className="text-center text-[10px] text-gray-400 mt-8 pb-12 select-none">
         Powered by Perch Restaurant OS • Evolving to Connect Communities
       </footer>
     </div>
