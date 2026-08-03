@@ -7,12 +7,15 @@ interface OnlineUsersBarProps {
 }
 
 export function OnlineUsersBar({ users, currentUser, onUserClick }: OnlineUsersBarProps) {
+  // Filter out numeric anonymous IDs and invalid handles
+  const validUsers = users.filter((h) => h && typeof h === "string" && !/^\d+$/.test(h.trim()));
+
   // Ensure currentUser is always included in the online users count and list
-  const allUsers = users.includes(currentUser) ? users : [currentUser, ...users];
+  const allUsers = validUsers.includes(currentUser) ? validUsers : [currentUser, ...validUsers];
 
   return (
     <div
-      className="flex items-center gap-2 px-4 py-2 overflow-x-auto"
+      className="flex items-center gap-2 px-4 py-2"
       style={{
         background: "var(--color-surface)",
         borderBottom: "1px solid var(--color-border)",
@@ -25,7 +28,10 @@ export function OnlineUsersBar({ users, currentUser, onUserClick }: OnlineUsersB
         🟢 {allUsers.length} online
       </span>
       <div className="w-px h-4 shrink-0" style={{ background: "var(--color-border)" }} />
-      <div className="flex gap-1.5 overflow-x-auto">
+      <div 
+        className="flex gap-1.5 overflow-x-auto" 
+        style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
+      >
         {allUsers.map((handle) => (
           <button
             key={handle}

@@ -94,14 +94,57 @@ export function ChatRoom({
     return () => clearInterval(interval);
   }, [venueId, chatToken]);
 
-  // Poll Discovery profiles (Online users) every 10 seconds
+  // Connect real-time WebSocket for live presence & instant message sync
+  useEffect(() => {
+    if (!venueId || !chatToken) return;
+
+    const host = process.env.NEXT_PUBLIC_WS_URL || 
+                 process.env.NEXT_PUBLIC_API_URL?.replace(/^http/, "ws") || 
+                 "wss://perchos.onrender.com";
+    const cleanHost = host.replace(/\/$/, "");
+    const wsUrl = `${cleanHost}/ws/room/${venueId}?token=${encodeURIComponent(chatToken)}`;
+
+    let ws: WebSocket | null = null;
+    try {
+      ws = new WebSocket(wsUrl);
+
+      ws.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          if (data.type === "presence" && Array.isArray(data.online)) {
+            const cleanOnline = data.online.filter((h: string) => h && !/^\d+$/.test(h.trim()));
+            setOnlineUsers(cleanOnline);
+          }
+        } catch (e) {
+          console.error("WS parse error:", e);
+        }
+      };
+    } catch (e) {
+      console.warn("WS init error:", e);
+    }
+
+    return () => {
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.close();
+      }
+    };
+  }, [venueId, chatToken]);
+
+  // Poll Discovery profiles as fallback every 10 seconds
   useEffect(() => {
     const fetchDiscovery = async () => {
       try {
         const data = await getDiscoveryProfiles(chatToken, 1, 50);
-        setActiveProfiles(data.profiles);
-        const handles = data.profiles.map((p: any) => p.display_name);
-        setOnlineUsers(handles);
+        if (data && data.profiles) {
+          const realProfiles = data.profiles.filter((p: any) => p.display_name && !/^\d+$/.test(p.display_name.trim()));
+          setActiveProfiles(realProfiles);
+          const handles = realProfiles.map((p: any) => p.display_name);
+          setOnlineUsers((prev) => {
+            const cleanPrev = prev.filter((h: string) => !/^\d+$/.test(h.trim()));
+            const merged = Array.from(new Set([...cleanPrev, ...handles]));
+            return merged;
+          });
+        }
       } catch (err) {
         console.error("Error polling discovery", err);
       }
