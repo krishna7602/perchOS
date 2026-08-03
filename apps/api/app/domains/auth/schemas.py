@@ -48,6 +48,7 @@ class CustomerLoginResponse(BaseModel):
     username: str
     onboarding_completed: bool
     profile_photo: str | None = None
+    email: str | None = None
     venue_id: str | None = None
     venue_name: str | None = None
 

@@ -277,6 +277,7 @@ async def customer_login(payload: CustomerLoginRequest):
         username=profile.username,
         onboarding_completed=profile.onboarding_completed,
         profile_photo=profile.profile_photo,
+        email=profile.email,
         venue_id=venue_id_str,
         venue_name=venue_name
     )

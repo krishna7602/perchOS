@@ -25,6 +25,7 @@ export function customerLogin(provider: string, credential: string, venueQrToken
     username: string;
     onboarding_completed: boolean;
     profile_photo: string | null;
+    email: string | null;
     venue_id: string | null;
     venue_name: string | null;
   }>("/auth/customer/login", {

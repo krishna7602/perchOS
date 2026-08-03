@@ -58,6 +58,12 @@ function GoogleCallbackContent() {
             sessionStorage.setItem("perch_chat_token", loginRes.token);
             sessionStorage.setItem("perch_handle", loginRes.name);
             sessionStorage.setItem("perch_username", loginRes.username);
+            if (loginRes.email) {
+              sessionStorage.setItem("perch_email", loginRes.email);
+            }
+            if (loginRes.profile_photo) {
+              sessionStorage.setItem("perch_profile_photo", loginRes.profile_photo);
+            }
             if (loginRes.venue_name) {
               sessionStorage.setItem("perch_venue_name", loginRes.venue_name);
             }

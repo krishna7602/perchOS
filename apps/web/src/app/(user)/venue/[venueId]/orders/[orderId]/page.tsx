@@ -20,6 +20,10 @@ export default function OrderPage() {
   const prevStatus = useRef<string | null>(null);
   const [isPickingUp, setIsPickingUp] = useState(false);
 
+  const profilePhoto = typeof window !== "undefined" ? sessionStorage.getItem("perch_profile_photo") : null;
+  const userEmail = typeof window !== "undefined" ? sessionStorage.getItem("perch_email") : null;
+  const handle = typeof window !== "undefined" ? sessionStorage.getItem("perch_handle") : null;
+
   const handleSelfPickup = async () => {
     setIsPickingUp(true);
     try {
@@ -128,6 +132,26 @@ export default function OrderPage() {
             {!!order.gst_number && (
               <p className="font-mono mt-0.5">GSTIN: {order.gst_number as string}</p>
             )}
+          </div>
+
+          {/* Customer Details */}
+          <div className="flex items-center justify-between p-3 mt-4 rounded-xl bg-amber-500/5 border border-amber-500/10 text-left max-w-sm mx-auto">
+            <div className="flex items-center gap-3">
+              {profilePhoto ? (
+                <img src={profilePhoto} alt={(order.customer_handle as string) || "Customer"} className="w-9 h-9 rounded-full object-cover border border-amber-500/30" />
+              ) : (
+                <div className="w-9 h-9 rounded-full bg-amber-600 text-white text-sm font-bold flex items-center justify-center">
+                  {((order.customer_handle as string) || "C").charAt(0).toUpperCase()}
+                </div>
+              )}
+              <div>
+                <p className="text-xs font-bold text-gray-900">{(order.customer_handle as string) || handle || "Customer"}</p>
+                {(order.customer_email || userEmail) && (
+                  <p className="text-[11px] text-gray-500 font-mono">{(order.customer_email || userEmail) as string}</p>
+                )}
+              </div>
+            </div>
+            <span className="text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded font-semibold">Verified User</span>
           </div>
         </div>
 

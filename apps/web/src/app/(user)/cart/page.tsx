@@ -21,6 +21,7 @@ export default function CartPage() {
     if (cart.items.length === 0) return;
 
     const handle = sessionStorage.getItem("perch_handle") || "Guest";
+    const email = sessionStorage.getItem("perch_email") || undefined;
 
     setIsSubmitting(true);
     setError("");
@@ -84,6 +85,7 @@ export default function CartPage() {
           },
           prefill: {
             name: handle,
+            email: email,
           },
           theme: {
             color: "#8B5E3C", // Perch primary color

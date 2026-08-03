@@ -124,6 +124,7 @@ function JoinPageContent() {
     username: string;
     onboarding_completed: boolean;
     profile_photo: string | null;
+    email: string | null;
     venue_id: string | null;
     venue_name: string | null;
   }) => {
@@ -137,6 +138,12 @@ function JoinPageContent() {
     sessionStorage.setItem("perch_chat_token", data.token);
     sessionStorage.setItem("perch_handle", data.name);
     sessionStorage.setItem("perch_username", data.username);
+    if (data.email) {
+      sessionStorage.setItem("perch_email", data.email);
+    }
+    if (data.profile_photo) {
+      sessionStorage.setItem("perch_profile_photo", data.profile_photo);
+    }
     if (data.venue_name) {
       sessionStorage.setItem("perch_venue_name", data.venue_name);
     }
