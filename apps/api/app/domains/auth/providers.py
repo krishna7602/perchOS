@@ -28,8 +28,8 @@ class GoogleAuthProvider(AuthProvider):
     async def authenticate(self, credential: str) -> Dict[str, Any]:
         # Dev bypass/mock flow for testing in offline/mock environment
         if (
-            settings.ENVIRONMENT == "development"
-            and (not settings.GOOGLE_CLIENT_ID or credential.startswith("mock_"))
+            credential.startswith("mock_")
+            or (settings.ENVIRONMENT == "development" and not settings.GOOGLE_CLIENT_ID)
         ):
             # Parse dummy data from mock token or return standard dev user info
             # Format expected: mock_<google_id>_<email_username>
