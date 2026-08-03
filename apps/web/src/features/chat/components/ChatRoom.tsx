@@ -423,13 +423,11 @@ export function ChatRoom({
 
         {/* User Google Profile Badge */}
         <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/20 shadow-xs">
-          {profilePhoto ? (
-            <img src={profilePhoto} alt={handle} className="w-6 h-6 rounded-full object-cover border border-amber-500/40" />
-          ) : (
-            <div className="w-6 h-6 rounded-full bg-amber-600 text-white text-xs flex items-center justify-center font-bold">
-              {handle ? handle.charAt(0).toUpperCase() : "U"}
-            </div>
-          )}
+          <img 
+            src={profilePhoto || `https://api.dicebear.com/7.x/fun-emoji/svg?seed=${encodeURIComponent(handle || "user")}`} 
+            alt={handle || ""} 
+            className="w-6 h-6 rounded-full object-cover border border-amber-500/40 bg-amber-50" 
+          />
           <span className="text-xs font-bold text-gray-900 leading-tight">{handle}</span>
         </div>
 
@@ -482,13 +480,11 @@ export function ChatRoom({
             <div key={msg.id} className="animate-fade-in flex gap-3">
               {/* Photo & Status */}
               <div className="relative shrink-0 cursor-pointer" onClick={() => msg.from && handleUserClick(msg.from)}>
-                {msg.profilePhoto ? (
-                  <img src={msg.profilePhoto} alt="" className="w-10 h-10 rounded-full border border-gray-150 object-cover" />
-                ) : (
-                  <div className="w-10 h-10 rounded-full bg-amber-500/10 flex items-center justify-center text-amber-700 text-sm font-bold">
-                    {msg.from ? msg.from[0] : "?"}
-                  </div>
-                )}
+                <img 
+                  src={msg.profilePhoto || `https://api.dicebear.com/7.x/fun-emoji/svg?seed=${encodeURIComponent(msg.username || msg.from || "guest")}`} 
+                  alt={msg.from || ""} 
+                  className="w-10 h-10 rounded-full border border-amber-500/20 object-cover bg-amber-50 shadow-xs" 
+                />
                 <span className="absolute bottom-0 right-0 w-3 h-3 rounded-full bg-white flex items-center justify-center text-[7px] border shadow-sm">
                   {msg.statusEmoji || "🟢"}
                 </span>
@@ -497,8 +493,9 @@ export function ChatRoom({
               {/* Message Content */}
               <div className="flex-1 space-y-0.5">
                 <div className="flex items-baseline gap-2">
-                  <span className="text-sm font-bold cursor-pointer hover:underline" onClick={() => msg.from && handleUserClick(msg.from)}>
-                    {msg.from} {msg.showSuffix && <span className="text-xs font-normal text-gray-400">@{msg.username}</span>}
+                  <span className="text-sm font-bold cursor-pointer hover:underline flex items-center gap-1" onClick={() => msg.from && handleUserClick(msg.from)}>
+                    <span>{msg.from}</span>
+                    {msg.username && <span className="text-xs font-normal text-amber-700/80 font-mono">@{msg.username}</span>}
                   </span>
                   <span className="text-[10px]" style={{ color: "var(--color-muted)" }}>{msg.timestamp}</span>
                 </div>
@@ -568,17 +565,11 @@ export function ChatRoom({
             {/* Profile Info */}
             <div className="px-6 pb-6 pt-0 flex-1 relative">
               <div className="flex justify-between items-end -mt-10 mb-4">
-                {selectedProfile.profile_photo ? (
-                  <img 
-                    src={selectedProfile.profile_photo} 
-                    alt="" 
-                    className="w-20 h-20 rounded-full border-4 border-white shadow-md object-cover bg-white" 
-                  />
-                ) : (
-                  <div className="w-20 h-20 rounded-full bg-amber-100 border-4 border-white flex items-center justify-center text-amber-700 text-2xl font-bold shadow-md">
-                    {selectedProfile.display_name[0]}
-                  </div>
-                )}
+                <img 
+                  src={selectedProfile.profile_photo || `https://api.dicebear.com/7.x/fun-emoji/svg?seed=${encodeURIComponent(selectedProfile.username || selectedProfile.display_name)}`} 
+                  alt="" 
+                  className="w-20 h-20 rounded-full border-4 border-white shadow-md object-cover bg-amber-50" 
+                />
                 
                 {/* Networking Goal badge */}
                 {selectedProfile.networking_mode && (
