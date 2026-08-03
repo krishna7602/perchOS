@@ -120,6 +120,10 @@ export function ignoreWave(waveId: string, token: string) {
   });
 }
 
+export function getPendingWaves(token: string) {
+  return apiFetch<{ wave_id: string; sender_id: string; sender_name: string; sender_photo: string | null; created_at: string }[]>("/connections/pending", { token });
+}
+
 export function getMyConnections(token: string) {
   return apiFetch<any[]>("/connections/", { token });
 }

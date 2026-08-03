@@ -48,6 +48,23 @@ async def send_wave(
         venue_id=customer.current_venue_id
     )
     await wave.insert()
+
+    # Real-time notification via WebSocket
+    try:
+        from app.domains.chat.manager import chat_manager
+        await chat_manager.unicast(
+            str(customer.current_venue_id),
+            receiver.display_name,
+            {
+                "type": "wave_notification",
+                "wave_id": str(wave.id),
+                "sender_id": str(customer.id),
+                "sender_name": customer.display_name,
+                "sender_photo": customer.profile_photo,
+            }
+        )
+    except Exception as e:
+        print("Error sending WS wave notification:", e)
     
     return {"status": "sent", "wave_id": str(wave.id)}
 
@@ -123,4 +140,26 @@ async def get_my_connections(customer: CustomerProfile = Depends(get_current_cus
                 "created_at": conn.created_at
             })
             
+    return results
+
+
+@router.get("/pending")
+async def get_pending_waves(customer: CustomerProfile = Depends(get_current_customer)):
+    """Get list of incoming pending wave requests for the current user."""
+    waves = await ConnectionRequest.find({
+        "receiver_id": customer.id,
+        "status": WaveStatus.PENDING
+    }).to_list()
+    
+    results = []
+    for w in waves:
+        sender = await CustomerProfile.get(w.sender_id)
+        if sender:
+            results.append({
+                "wave_id": str(w.id),
+                "sender_id": str(sender.id),
+                "sender_name": sender.display_name,
+                "sender_photo": sender.profile_photo,
+                "created_at": w.created_at
+            })
     return results

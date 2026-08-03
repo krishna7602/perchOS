@@ -13,8 +13,10 @@ import {
   sendWave, 
   acceptWave, 
   getDirectMessages, 
-  sendDirectMessage 
+  sendDirectMessage,
+  getPendingWaves
 } from "@/lib/api";
+import { playNotificationSound } from "@/lib/audio";
 
 interface DisplayMessage {
   id: string;
@@ -64,6 +66,14 @@ export function ChatRoom({
   const [selectedProfile, setSelectedProfile] = useState<any | null>(null);
   const [isLoadingProfile, setIsLoadingProfile] = useState(false);
   const [profileError, setProfileError] = useState("");
+
+  // Wave notification state
+  const [incomingWave, setIncomingWave] = useState<{
+    waveId: string;
+    senderId: string;
+    senderName: string;
+    senderPhoto?: string | null;
+  } | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -117,6 +127,14 @@ export function ChatRoom({
               const cleanPrev = prev.filter((h: string) => !/^\d+$/.test(h.trim()));
               return Array.from(new Set([...cleanPrev, ...cleanOnline]));
             });
+          } else if (data.type === "wave_notification") {
+            setIncomingWave({
+              waveId: data.wave_id,
+              senderId: data.sender_id,
+              senderName: data.sender_name,
+              senderPhoto: data.sender_photo,
+            });
+            try { playNotificationSound(); } catch (e) {}
           }
         } catch (e) {
           console.error("WS parse error:", e);
@@ -157,6 +175,49 @@ export function ChatRoom({
     const interval = setInterval(fetchDiscovery, 10000);
     return () => clearInterval(interval);
   }, [chatToken]);
+
+  // Poll pending incoming wave requests every 4 seconds
+  useEffect(() => {
+    const checkPendingWaves = async () => {
+      try {
+        const waves = await getPendingWaves(chatToken);
+        if (waves && waves.length > 0) {
+          const first = waves[0];
+          setIncomingWave({
+            waveId: first.wave_id,
+            senderId: first.sender_id,
+            senderName: first.sender_name,
+            senderPhoto: first.sender_photo,
+          });
+        }
+      } catch (err) {
+        // quiet
+      }
+    };
+
+    checkPendingWaves();
+    const interval = setInterval(checkPendingWaves, 4000);
+    return () => clearInterval(interval);
+  }, [chatToken]);
+
+  const handleAcceptIncomingWave = async () => {
+    if (!incomingWave) return;
+    try {
+      const res = await acceptWave(incomingWave.waveId, chatToken);
+      if (res.status === "accepted" && res.connection_id) {
+        setDmThread({
+          connectionId: res.connection_id,
+          handle: incomingWave.senderName,
+          messages: [],
+          isAccepted: true,
+        });
+      }
+    } catch (err) {
+      console.error("Error accepting wave", err);
+    } finally {
+      setIncomingWave(null);
+    }
+  };
 
   // Poll DM messages every 3 seconds when a thread is active
   useEffect(() => {
@@ -305,7 +366,42 @@ export function ChatRoom({
   const userEmail = typeof window !== "undefined" ? sessionStorage.getItem("perch_email") : null;
 
   return (
-    <div className="flex flex-col h-[calc(100dvh-64px)]" style={{ background: "var(--color-bg)" }}>
+    <div className="flex flex-col h-[calc(100dvh-64px)] relative" style={{ background: "var(--color-bg)" }}>
+      {/* Floating Wave Notification Toast */}
+      {incomingWave && (
+        <div className="fixed top-16 inset-x-4 max-w-md mx-auto z-50 animate-bounce-short">
+          <div className="bg-gradient-to-r from-amber-600 to-orange-600 text-white p-4 rounded-2xl shadow-2xl flex items-center justify-between border border-amber-300/40">
+            <div className="flex items-center gap-3">
+              {incomingWave.senderPhoto ? (
+                <img src={incomingWave.senderPhoto} alt="" className="w-10 h-10 rounded-full object-cover border-2 border-white/60 shadow-sm" />
+              ) : (
+                <div className="w-10 h-10 rounded-full bg-white/20 text-white font-bold flex items-center justify-center border-2 border-white/60 text-sm">
+                  {incomingWave.senderName ? incomingWave.senderName[0] : "W"}
+                </div>
+              )}
+              <div>
+                <p className="text-[10px] font-bold text-amber-200 uppercase tracking-wider">New Wave Notification 👋</p>
+                <p className="text-sm font-bold">{incomingWave.senderName} waved at you!</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleAcceptIncomingWave}
+                className="px-3.5 py-1.5 bg-white text-orange-600 font-bold rounded-xl text-xs shadow-md hover:bg-amber-50 transition-all cursor-pointer"
+              >
+                Accept 👋
+              </button>
+              <button
+                onClick={() => setIncomingWave(null)}
+                className="p-1 rounded-full text-amber-200 hover:text-white hover:bg-white/20 transition-colors cursor-pointer"
+              >
+                <X size={16} />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div
         className="flex items-center justify-between px-4 py-3 shrink-0"
