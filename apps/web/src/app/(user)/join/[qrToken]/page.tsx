@@ -77,6 +77,35 @@ export default function JoinPage() {
         setError("Invalid or expired QR code.");
         setIsLoading(false);
       });
+
+    // Load Google Identity Services (GSI) script if client ID is configured
+    const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
+    if (clientId) {
+      const script = document.createElement("script");
+      script.src = "https://accounts.google.com/gsi/client";
+      script.async = true;
+      script.defer = true;
+      script.onload = () => {
+        if ((window as any).google?.accounts?.id) {
+          (window as any).google.accounts.id.initialize({
+            client_id: clientId,
+            callback: async (response: any) => {
+              if (response.credential) {
+                setIsSubmitting(true);
+                try {
+                  const data = await customerLogin("google", response.credential, qrToken);
+                  handleLoginSuccess(data);
+                } catch (err: any) {
+                  setError(err.detail || "Google authentication failed.");
+                  setIsSubmitting(false);
+                }
+              }
+            },
+          });
+        }
+      };
+      document.body.appendChild(script);
+    }
   }, [qrToken]);
 
   const handleLoginSuccess = (data: {
@@ -112,13 +141,19 @@ export default function JoinPage() {
   };
 
   const handleGoogleLogin = async () => {
+    const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
+    if (clientId && (window as any).google?.accounts?.id) {
+      // Trigger native Google One Tap / Sign In popup
+      (window as any).google.accounts.id.prompt();
+      return;
+    }
+
+    // Dev/MVP fallback: Create a fresh new user so onboarding screen is always testable
     setIsSubmitting(true);
     setError("");
     try {
-      // Simulate/trigger actual Google Login if needed, or dev bypass
-      // Since it's development/MVP, we trigger the login using a mock token representing Google Sign-In
-      const randomId = Math.floor(100000 + Math.random() * 900000);
-      const mockCredential = `mock_google_${randomId}_ram.krishna`;
+      const timestamp = Date.now();
+      const mockCredential = `mock_google_${timestamp}_guest_${timestamp.toString().slice(-4)}`;
       const data = await customerLogin("google", mockCredential, qrToken);
       handleLoginSuccess(data);
     } catch (err: any) {
