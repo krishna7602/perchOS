@@ -48,12 +48,13 @@ export function DMPanel({
 
   return (
     <div
-      className="fixed inset-x-0 bottom-0 z-50 flex flex-col animate-slide-up"
+      className="fixed inset-x-0 bottom-[64px] z-50 flex flex-col animate-slide-up"
       style={{
-        maxHeight: "60vh",
+        maxHeight: "calc(70vh - 64px)",
         background: "var(--color-surface)",
         borderRadius: "var(--radius-lg) var(--radius-lg) 0 0",
-        boxShadow: "0 -4px 24px rgba(58, 46, 39, 0.15)",
+        boxShadow: "0 -4px 24px rgba(58, 46, 39, 0.2)",
+        borderTop: "1px solid var(--color-border)",
       }}
     >
       {/* Header */}
