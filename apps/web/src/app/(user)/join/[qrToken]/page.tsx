@@ -144,12 +144,9 @@ function JoinPageContent() {
       sessionStorage.setItem("perch_venue_id", data.venue_id || venue?.id || "");
     }
 
-    if (data.onboarding_completed) {
-      setStep("joining");
-      router.push(`/venue/${data.venue_id || venue?.id}/chat`);
-    } else {
-      setStep("onboarding");
-    }
+    setStep("joining");
+    const targetVenueId = data.venue_id || venue?.id || "";
+    router.push(targetVenueId ? `/venue/${targetVenueId}/chat` : "/");
   };
 
   const handleGoogleLogin = () => {

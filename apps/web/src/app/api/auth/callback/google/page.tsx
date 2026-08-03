@@ -67,12 +67,8 @@ function GoogleCallbackContent() {
 
             setStatus("success");
 
-            if (loginRes.onboarding_completed) {
-              const targetVenueId = loginRes.venue_id || "";
-              window.location.href = targetVenueId ? `/venue/${targetVenueId}/chat` : "/";
-            } else {
-              window.location.href = `/join/${state}?step=onboarding&token=${encodeURIComponent(loginRes.token)}&name=${encodeURIComponent(loginRes.name)}&username=${encodeURIComponent(loginRes.username)}`;
-            }
+            const targetVenueId = loginRes.venue_id || state || "";
+            window.location.href = targetVenueId ? `/venue/${targetVenueId}/chat` : "/";
           } catch (err: any) {
             setStatus("error");
             setErrorMsg(err.message || err.detail || "Authentication failed.");

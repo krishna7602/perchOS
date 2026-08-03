@@ -212,16 +212,19 @@ async def customer_login(payload: CustomerLoginRequest):
             username=username,
             display_name=user_info["name"],
             email=user_info["email"],
-            profile_photo=user_info["profile_picture"],
+            profile_photo=user_info.get("profile_picture"),
             networking_mode=NetworkingMode.NETWORKING,
             is_visible=True,
-            onboarding_completed=False,
+            onboarding_completed=True,
             created_at=datetime.utcnow(),
             updated_at=datetime.utcnow(),
             last_active=datetime.utcnow()
         )
         await profile.insert()
     else:
+        if user_info.get("profile_picture"):
+            profile.profile_photo = user_info.get("profile_picture")
+        profile.onboarding_completed = True
         profile.last_active = datetime.utcnow()
         await profile.save()
 
