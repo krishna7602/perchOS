@@ -77,36 +77,26 @@ export default function JoinPage() {
         setError("Invalid or expired QR code.");
         setIsLoading(false);
       });
-
-    // Load Google Identity Services (GSI) script if client ID is configured
-    const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
-    if (clientId) {
-      const script = document.createElement("script");
-      script.src = "https://accounts.google.com/gsi/client";
-      script.async = true;
-      script.defer = true;
-      script.onload = () => {
-        if ((window as any).google?.accounts?.id) {
-          (window as any).google.accounts.id.initialize({
-            client_id: clientId,
-            callback: async (response: any) => {
-              if (response.credential) {
-                setIsSubmitting(true);
-                try {
-                  const data = await customerLogin("google", response.credential, qrToken);
-                  handleLoginSuccess(data);
-                } catch (err: any) {
-                  setError(err.detail || "Google authentication failed.");
-                  setIsSubmitting(false);
-                }
-              }
-            },
-          });
-        }
-      };
-      document.body.appendChild(script);
-    }
   }, [qrToken]);
+
+  // Listen for Google OAuth callback message from popup
+  useEffect(() => {
+    const handleMessage = async (event: MessageEvent) => {
+      if (event.data?.type === "GOOGLE_AUTH_CALLBACK" && event.data?.credential) {
+        setIsSubmitting(true);
+        setError("");
+        try {
+          const data = await customerLogin("google", event.data.credential, qrToken);
+          handleLoginSuccess(data);
+        } catch (err: any) {
+          setError(err.detail || "Google authentication failed.");
+          setIsSubmitting(false);
+        }
+      }
+    };
+    window.addEventListener("message", handleMessage);
+    return () => window.removeEventListener("message", handleMessage);
+  }, [qrToken, venue]);
 
   const handleLoginSuccess = (data: {
     token: string;
@@ -140,15 +130,40 @@ export default function JoinPage() {
     }
   };
 
-  const handleGoogleLogin = async () => {
+  const handleGoogleLogin = () => {
     const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
-    if (clientId && (window as any).google?.accounts?.id) {
-      // Trigger native Google One Tap / Sign In popup
-      (window as any).google.accounts.id.prompt();
+    if (!clientId) {
+      // No Google Client ID configured — use mock fallback for dev
+      handleMockLogin();
       return;
     }
 
-    // Dev/MVP fallback: Create a fresh new user so onboarding screen is always testable
+    // Open Google OAuth consent screen in a popup window
+    const redirectUri = `${window.location.origin}/auth/google/callback`;
+    const scope = "openid email profile";
+    const state = qrToken; // pass QR token through state for CSRF + context
+    const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
+      `client_id=${encodeURIComponent(clientId)}` +
+      `&redirect_uri=${encodeURIComponent(redirectUri)}` +
+      `&response_type=code` +
+      `&scope=${encodeURIComponent(scope)}` +
+      `&state=${encodeURIComponent(state)}` +
+      `&access_type=offline` +
+      `&prompt=consent`;
+
+    const width = 500;
+    const height = 600;
+    const left = window.screenX + (window.outerWidth - width) / 2;
+    const top = window.screenY + (window.outerHeight - height) / 2;
+
+    window.open(
+      authUrl,
+      "google-auth-popup",
+      `width=${width},height=${height},left=${left},top=${top},scrollbars=yes`
+    );
+  };
+
+  const handleMockLogin = async () => {
     setIsSubmitting(true);
     setError("");
     try {

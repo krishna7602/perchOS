@@ -1,4 +1,5 @@
 from fastapi import APIRouter, HTTPException, Depends
+from pydantic import BaseModel
 
 from app.domains.auth.models import User, Role, StaffStatus
 from app.domains.venues.restaurant_model import Restaurant
@@ -7,6 +8,53 @@ from app.core.config import settings
 from app.domains.auth.schemas import LoginRequest, GoogleLoginRequest, TokenResponse
 
 router = APIRouter(prefix="/auth", tags=["auth"])
+
+
+class GoogleCodeExchangeRequest(BaseModel):
+    code: str
+    redirect_uri: str
+
+
+@router.post("/google/exchange")
+async def exchange_google_code(payload: GoogleCodeExchangeRequest):
+    """Exchange Google OAuth authorization code for an ID token.
+
+    The frontend opens a popup to Google's consent screen which redirects back
+    with an auth code. This endpoint exchanges that code for tokens server-side
+    (keeping the client secret secure) and returns the id_token to the frontend.
+    """
+    import httpx
+
+    if not settings.GOOGLE_CLIENT_ID or not settings.GOOGLE_CLIENT_SECRET:
+        raise HTTPException(status_code=501, detail="google_oauth_not_configured")
+
+    async with httpx.AsyncClient() as client:
+        resp = await client.post(
+            "https://oauth2.googleapis.com/token",
+            data={
+                "code": payload.code,
+                "client_id": settings.GOOGLE_CLIENT_ID,
+                "client_secret": settings.GOOGLE_CLIENT_SECRET,
+                "redirect_uri": payload.redirect_uri,
+                "grant_type": "authorization_code",
+            },
+        )
+
+    if resp.status_code != 200:
+        detail = "google_token_exchange_failed"
+        try:
+            body = resp.json()
+            detail = body.get("error_description", body.get("error", detail))
+        except Exception:
+            pass
+        raise HTTPException(status_code=401, detail=detail)
+
+    tokens = resp.json()
+    id_token_value = tokens.get("id_token")
+    if not id_token_value:
+        raise HTTPException(status_code=401, detail="no_id_token_in_response")
+
+    return {"id_token": id_token_value}
 
 
 @router.post("/admin/login", response_model=TokenResponse)
