@@ -63,7 +63,13 @@ async def get_venue_messages(
         )
 
     # Fetch messages
-    v_id = PydanticObjectId(venue_id)
+    try:
+        v_id = PydanticObjectId(venue_id)
+    except Exception:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="invalid_venue_id",
+        )
     messages = await VenueChatMessage.find(
         VenueChatMessage.venue_id == v_id
     ).sort("-created_at").limit(limit).to_list()
