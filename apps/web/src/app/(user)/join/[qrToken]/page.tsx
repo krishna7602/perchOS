@@ -295,47 +295,108 @@ function JoinPageContent() {
   if (!venue) return null;
 
   return (
-    <div className="min-h-screen flex flex-col justify-between px-4 py-8" style={{ background: "var(--color-bg)" }}>
-      
+    <div className="min-h-screen relative flex flex-col justify-between px-4 py-8 overflow-hidden select-none" style={{ background: "var(--bg)" }}>
+      {/* Ambient background soft-drifting blurred color blobs */}
+      <div className="absolute -top-32 -left-32 w-96 h-96 bg-[#C97B4A]/12 rounded-full filter blur-[60px] pointer-events-none animate-blob-1" />
+      <div className="absolute -bottom-32 -right-32 w-96 h-96 bg-[#8A9A6E]/12 rounded-full filter blur-[60px] pointer-events-none animate-blob-2" />
+
       {step === "login" && (
-        <div className="flex-1 flex flex-col justify-center max-w-md mx-auto w-full animate-fade-in">
-          {/* Logo & Brand */}
-          <div className="text-center mb-8">
-            <div className="w-20 h-20 bg-amber-500/10 rounded-3xl flex items-center justify-center mx-auto mb-4 border border-amber-500/20 shadow-inner">
-              <span className="text-4xl">☕</span>
+        <div className="flex-1 flex flex-col justify-center max-w-md mx-auto w-full relative z-10">
+          
+          {/* Stagger 1: Signature Cup Scene */}
+          <div className="entrance-stagger-1 text-center">
+            <div className="relative w-24 h-24 mx-auto mb-6 flex items-center justify-center">
+              {/* Cup background container */}
+              <div className="absolute inset-0 bg-[#EFE6D6] rounded-3xl transform rotate-2 border border-[#E3D8C6]/80 shadow-xs" />
+              
+              <div className="relative z-10 flex flex-col items-center justify-center pt-2">
+                {/* 3 Staggered Steam Wisps */}
+                <div className="absolute -top-3 flex justify-center gap-1.5 w-12 h-6 pointer-events-none">
+                  <div className="w-1 h-3.5 bg-[#C97B4A]/40 rounded-full blur-[0.5px] animate-steam-1" />
+                  <div className="w-1.5 h-4.5 bg-[#6B3A28]/35 rounded-full blur-[0.5px] animate-steam-2" />
+                  <div className="w-1 h-3.5 bg-[#C97B4A]/40 rounded-full blur-[0.5px] animate-steam-3" />
+                </div>
+
+                {/* Cafe Logo or Cup Icon */}
+                {(venue as any)?.logo_url ? (
+                  <img 
+                    src={(venue as any).logo_url} 
+                    alt={venue?.name || "Logo"} 
+                    className="w-12 h-12 rounded-full object-cover shadow-sm border border-[#6B3A28]/20 bg-[#FFFDF9]" 
+                  />
+                ) : (
+                  <div className="relative w-12 h-10 flex flex-col items-center">
+                    {/* Cup Body & Rim */}
+                    <div className="w-10 h-7 bg-gradient-to-b from-[#6B3A28] to-[#4A2818] rounded-b-2xl shadow-xs border-t-2 border-[#3A2A1E] relative overflow-hidden">
+                      {/* Coffee liquid surface */}
+                      <div className="absolute top-0 inset-x-0 h-1 bg-[#3A2A1E] opacity-90" />
+                    </div>
+                    {/* Handle */}
+                    <div className="absolute right-0 top-1 w-3 h-4 border-2 border-[#6B3A28] rounded-r-md transform translate-x-1" />
+                    {/* Saucer */}
+                    <div className="w-12 h-1.5 bg-[#4A2818] rounded-full mt-0.5 opacity-80 shadow-xs" />
+                  </div>
+                )}
+              </div>
             </div>
-            <h1 className="text-3xl font-extrabold tracking-tight mb-2" style={{ color: "var(--color-primary)", fontFamily: "var(--font-heading)" }}>
-              Welcome to {venue.name}
+          </div>
+
+          {/* Stagger 2: Heading */}
+          <div className="entrance-stagger-2 text-center mb-3">
+            <h1 className="text-3xl font-extrabold tracking-tight" style={{ color: "var(--ink)", fontFamily: "var(--font-heading)" }}>
+              Welcome to {venue?.name || "bytebox"}
             </h1>
-            <p className="text-sm px-4" style={{ color: "var(--color-muted)" }}>
+          </div>
+
+          {/* Stagger 3: Subtitle */}
+          <div className="entrance-stagger-3 text-center mb-8">
+            <p className="text-sm px-4 leading-relaxed" style={{ color: "var(--muted)" }}>
               Sign in once with Google to order food, join the community, chat with other visitors, and save your preferences.
             </p>
           </div>
 
-          {/* Action Area */}
-          <div 
-            className="rounded-3xl p-6 mb-8 border"
-            style={{ 
-              background: "var(--color-surface)", 
-              borderColor: "var(--color-border)",
-              boxShadow: "var(--shadow-md)"
-            }}
-          >
-            {/* Google Sign-in Button */}
-            <button
-              onClick={handleGoogleLogin}
-              disabled={isSubmitting}
-              className="w-full flex items-center justify-center gap-3 bg-white hover:bg-gray-50 text-gray-700 font-semibold py-3 px-4 rounded-xl border border-gray-300 transition-all shadow-sm cursor-pointer active:scale-98 disabled:opacity-50"
+          {/* Stagger 4: Google Sign-in Card */}
+          <div className="entrance-stagger-4">
+            <div 
+              className="rounded-3xl p-6 mb-8 border transition-all duration-300"
+              style={{ 
+                background: "var(--surface)", 
+                borderColor: "var(--border)",
+                boxShadow: "0 8px 30px rgba(58, 42, 30, 0.06)"
+              }}
             >
-              <svg className="w-5 h-5" viewBox="0 0 24 24">
-                <path
-                  fill="#EA4335"
-                  d="M12.24 10.285V14.4h6.887c-.648 2.41-2.519 4.114-5.136 4.114A5.99 5.99 0 0 1 7.99 12.5a5.99 5.99 0 0 1 6.002-6.014c1.6 0 3.012.604 4.092 1.6l3.155-3.156C19.24 3.01 15.938 1.5 12.24 1.5 6.22 1.5 1.5 6.22 1.5 12.24s4.72 10.74 10.74 10.74c5.968 0 10.76-4.793 10.76-10.76 0-.663-.06-1.32-.177-1.935H12.24Z"
-                />
-              </svg>
-              Continue with Google
-            </button>
+              <button
+                onClick={handleGoogleLogin}
+                disabled={isSubmitting}
+                className="btn-google w-full relative flex items-center justify-center gap-3 font-semibold py-3.5 px-4 rounded-xl cursor-pointer disabled:opacity-50 min-h-[48px]"
+              >
+                {isSubmitting ? (
+                  <div className="flex items-center gap-2">
+                    <div className="w-5 h-5 border-2 border-[#C97B4A] border-t-transparent rounded-full animate-spin" />
+                    <span className="text-sm text-[#95816D]">Connecting...</span>
+                  </div>
+                ) : (
+                  <>
+                    <svg className="w-5 h-5 shrink-0 transition-transform group-hover:scale-105" viewBox="0 0 24 24">
+                      <path
+                        fill="#EA4335"
+                        d="M12.24 10.285V14.4h6.887c-.648 2.41-2.519 4.114-5.136 4.114A5.99 5.99 0 0 1 7.99 12.5a5.99 5.99 0 0 1 6.002-6.014c1.6 0 3.012.604 4.092 1.6l3.155-3.156C19.24 3.01 15.938 1.5 12.24 1.5 6.22 1.5 1.5 6.22 1.5 12.24s4.72 10.74 10.74 10.74c5.968 0 10.76-4.793 10.76-10.76 0-.663-.06-1.32-.177-1.935H12.24Z"
+                      />
+                    </svg>
+                    <span className="text-sm">Continue with Google</span>
+                  </>
+                )}
+              </button>
+            </div>
           </div>
+
+          {/* Stagger 5: Footer */}
+          <div className="entrance-stagger-5 text-center">
+            <p className="text-[11px] font-medium" style={{ color: "var(--muted)" }}>
+              Powered by Perch Restaurant OS • Evolving to Connect Communities
+            </p>
+          </div>
+
         </div>
       )}
 
@@ -587,10 +648,6 @@ function JoinPageContent() {
         </div>
       )}
 
-      {/* Footer Branding */}
-      <footer className="text-center text-[10px] text-gray-400 mt-8 pb-12 select-none">
-        Powered by Perch Restaurant OS • Evolving to Connect Communities
-      </footer>
     </div>
   );
 }
