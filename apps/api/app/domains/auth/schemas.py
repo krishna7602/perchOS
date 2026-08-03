@@ -34,3 +34,30 @@ class CreateStaffRequest(BaseModel):
 class StaffStatusUpdate(BaseModel):
     """Payload to update staff status."""
     status: str
+
+
+class CustomerLoginRequest(BaseModel):
+    provider: str
+    credential: str
+    venue_qr_token: str | None = None
+
+
+class CustomerLoginResponse(BaseModel):
+    token: str
+    name: str
+    username: str
+    onboarding_completed: bool
+    profile_photo: str | None = None
+    venue_id: str | None = None
+    venue_name: str | None = None
+
+
+class CustomerOnboardingRequest(BaseModel):
+    headline: str | None = None
+    company: str | None = None
+    college: str | None = None
+    interests: list[str] = []
+    professional_tags: list[str] = []
+    networking_mode: str = "Networking"
+    social_links: dict | None = None
+

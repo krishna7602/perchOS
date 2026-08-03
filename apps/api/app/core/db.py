@@ -21,13 +21,19 @@ async def init_db():
     from app.domains.chat.team_models import TeamChannel, TeamMessage
     from app.domains.notifications.models import PushSubscription
 
-    from app.domains.networking.models import CustomerProfile, ConnectionRequest, Connection, DirectMessage
+    from app.domains.networking.models import (
+        CustomerAccount, CustomerProfile, SocialLink, Interest, ProfessionalTag,
+        VenueSession, Connection, ConnectionRequest, DirectMessage, UserPreference,
+        ProfileVisibility, UserStatus, VenueChatMessage
+    )
 
     await init_beanie(
         database=db,
         document_models=[
             User, Attendance, Restaurant, Branch, MenuItem, Order, Counter, Payment, TeamChannel, TeamMessage,
-            CustomerProfile, ConnectionRequest, Connection, DirectMessage, PushSubscription
+            CustomerAccount, CustomerProfile, SocialLink, Interest, ProfessionalTag,
+            VenueSession, Connection, ConnectionRequest, DirectMessage, UserPreference,
+            ProfileVisibility, UserStatus, VenueChatMessage, PushSubscription
         ],
     )
 

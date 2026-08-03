@@ -78,3 +78,49 @@ async def discover_profiles(
         page=page,
         size=size
     )
+
+
+@router.get("/search", response_model=DiscoveryResponse)
+async def search_profiles(
+    query: str = Query("", min_length=1),
+    page: int = Query(1, ge=1),
+    size: int = Query(20, ge=1, le=50),
+    customer: CustomerProfile = Depends(get_current_customer),
+):
+    """
+    Search visible users globally by name, username, company, college, interests, tags, skills, or networking goal.
+    """
+    regex = {"$regex": query, "$options": "i"}
+    search_filter = {
+        "is_visible": True,
+        "_id": {"$ne": customer.id},
+        "$or": [
+            {"display_name": regex},
+            {"username": regex},
+            {"company": regex},
+            {"college": regex},
+            {"interests": regex},
+            {"professional_tags": regex},
+            {"skills": regex},
+            {"networking_mode": regex}
+        ]
+    }
+
+    skip = (page - 1) * size
+    total = await CustomerProfile.find(search_filter).count()
+    profiles_cursor = CustomerProfile.find(search_filter).skip(skip).limit(size)
+    profiles = await profiles_cursor.to_list()
+
+    results = []
+    for p in profiles:
+        p_dict = p.model_dump(exclude={"account_id", "email", "device_id", "created_at", "updated_at"})
+        p_dict["id"] = str(p.id)
+        results.append(p_dict)
+
+    return DiscoveryResponse(
+        profiles=results,
+        total=total,
+        page=page,
+        size=size
+    )
+

@@ -15,6 +15,24 @@ class NetworkingMode(str, Enum):
     HIDDEN = "Hidden"
 
 
+class WaveStatus(str, Enum):
+    PENDING = "PENDING"
+    ACCEPTED = "ACCEPTED"
+    IGNORED = "IGNORED"
+
+
+class CustomerAccount(Document):
+    google_id: Indexed(str)  # type: ignore
+    email: Indexed(str)  # type: ignore
+    email_verified: bool = False
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    last_login: datetime = Field(default_factory=datetime.utcnow)
+
+    class Settings:
+        name = "customer_accounts"
+        indexes = ["google_id", "email"]
+
+
 class SocialLinks(BaseModel):
     linkedin: str | None = None
     instagram: str | None = None
@@ -32,60 +50,76 @@ class SocialLinks(BaseModel):
     discord: str | None = None
 
 
+class SocialLink(Document):
+    user_id: PydanticObjectId
+    linkedin: str | None = None
+    instagram: str | None = None
+    github: str | None = None
+    portfolio: str | None = None
+    website: str | None = None
+
+    class Settings:
+        name = "social_links"
+        indexes = ["user_id"]
+
+
+class Interest(Document):
+    name: Indexed(str, unique=True)  # type: ignore
+
+    class Settings:
+        name = "interests"
+
+
+class ProfessionalTag(Document):
+    name: Indexed(str, unique=True)  # type: ignore
+
+    class Settings:
+        name = "professional_tags"
+
+
 class CustomerProfile(Document):
     """The networking profile for a customer."""
-    # Identity
-    device_id: Indexed(str)  # type: ignore # Used instead of OTP for Phase 1 to track unique sessions
-    
-    # Basic Info
-    name: str
-    display_picture: str | None = None
+    account_id: PydanticObjectId
+    uuid: Indexed(str, unique=True)  # type: ignore
+    username: Indexed(str, unique=True)  # type: ignore
+    display_name: str
+    email: Indexed(str)  # type: ignore
+    profile_photo: str | None = None
     headline: str | None = None
     bio: str | None = None
-    
-    # Professional
     company: str | None = None
     college: str | None = None
-    job_title: str | None = None
-    industry: str | None = None
-    professional_tags: list[str] = Field(default_factory=list)
     skills: list[str] = Field(default_factory=list)
-    
-    # Social / Interests
     interests: list[str] = Field(default_factory=list)
-    social_tags: list[str] = Field(default_factory=list)
-    social_links: SocialLinks = Field(default_factory=SocialLinks)
-    
-    # Networking & Privacy
-    mode: NetworkingMode = NetworkingMode.NETWORKING
+    professional_tags: list[str] = Field(default_factory=list)
+    networking_mode: NetworkingMode = NetworkingMode.NETWORKING
     is_visible: bool = True
+    onboarding_completed: bool = False
     
-    # Location context (updated when joining a room)
     current_venue_id: PydanticObjectId | None = None
     last_active: datetime = Field(default_factory=datetime.utcnow)
     
-    # Analytics / Future
     recent_visits: list[PydanticObjectId] = Field(default_factory=list)
     badges: list[str] = Field(default_factory=list)
+    favorite_cafes: list[PydanticObjectId] = Field(default_factory=list)
+    connections: list[PydanticObjectId] = Field(default_factory=list)
+    blocked_users: list[PydanticObjectId] = Field(default_factory=list)
     
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
 
+    # Legacy device_id field for compatibility with older code
+    device_id: str | None = None
+
     class Settings:
         name = "customer_profiles"
-        indexes = ["device_id", "current_venue_id", "mode", "is_visible"]
-
-
-class WaveStatus(str, Enum):
-    PENDING = "PENDING"
-    ACCEPTED = "ACCEPTED"
-    IGNORED = "IGNORED"
+        indexes = ["uuid", "username", "email", "current_venue_id", "networking_mode", "is_visible"]
 
 
 class ConnectionRequest(Document):
     """A 'Wave' sent from one customer to another."""
     sender_id: PydanticObjectId
-    receiver_id: Indexed(PydanticObjectId) # type: ignore
+    receiver_id: Indexed(PydanticObjectId)  # type: ignore
     status: WaveStatus = WaveStatus.PENDING
     venue_id: PydanticObjectId
     
@@ -123,3 +157,60 @@ class DirectMessage(Document):
         name = "direct_messages"
         indexes = ["connection_id", "created_at"]
 
+
+class VenueSession(Document):
+    user_id: PydanticObjectId
+    venue_id: PydanticObjectId
+    joined_at: datetime = Field(default_factory=datetime.utcnow)
+    last_active: datetime = Field(default_factory=datetime.utcnow)
+    is_active: bool = True
+
+    class Settings:
+        name = "venue_sessions"
+        indexes = ["user_id", "venue_id", "is_active"]
+
+
+class UserPreference(Document):
+    user_id: PydanticObjectId
+    notifications_enabled: bool = True
+    dark_mode: bool = False
+
+    class Settings:
+        name = "user_preferences"
+        indexes = ["user_id"]
+
+
+class ProfileVisibility(Document):
+    user_id: PydanticObjectId
+    mode: str = "VISIBLE"  # VISIBLE, HIDDEN
+
+    class Settings:
+        name = "profile_visibilities"
+        indexes = ["user_id"]
+
+
+class UserStatus(Document):
+    user_id: PydanticObjectId
+    status_emoji: str = "🟢"
+    status_text: str | None = None
+
+    class Settings:
+        name = "user_statuses"
+        indexes = ["user_id"]
+
+
+class VenueChatMessage(Document):
+    venue_id: PydanticObjectId
+    sender_id: PydanticObjectId
+    content: str
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    edited_at: datetime | None = None
+    
+    # Future Ready
+    read_receipts: list[PydanticObjectId] = Field(default_factory=list)
+    reactions: list[dict] = Field(default_factory=list)
+    replies: list[dict] = Field(default_factory=list)
+
+    class Settings:
+        name = "venue_chat_messages"
+        indexes = ["venue_id", "created_at"]

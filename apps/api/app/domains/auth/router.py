@@ -96,6 +96,31 @@ async def admin_google_login(payload: GoogleLoginRequest):
     return TokenResponse(token=token, name=user.name)
 
 from app.deps import get_current_user
+from app.domains.auth.providers import get_auth_provider
+from app.domains.networking.models import (
+    CustomerAccount, CustomerProfile, SocialLink, VenueSession, NetworkingMode
+)
+from app.domains.venues.branch_model import Branch
+from app.domains.auth.schemas import CustomerLoginRequest, CustomerLoginResponse, CustomerOnboardingRequest
+from app.deps import get_current_customer
+import re
+import uuid
+from datetime import datetime
+
+async def generate_unique_username(display_name: str) -> str:
+    clean_name = re.sub(r'[^a-zA-Z0-9_]', '', display_name.lower().replace(' ', ''))
+    if not clean_name:
+        clean_name = "user"
+    base_username = clean_name[:25]
+    username = base_username
+    counter = 2
+    while True:
+        existing = await CustomerProfile.find_one(CustomerProfile.username == username)
+        if not existing:
+            return username
+        suffix = str(counter)
+        username = base_username[:30 - len(suffix)] + suffix
+        counter += 1
 
 @router.get("/me")
 async def get_me(current_user: User = Depends(get_current_user)):
@@ -107,3 +132,149 @@ async def get_me(current_user: User = Depends(get_current_user)):
         "role": current_user.role,
         "status": current_user.status
     }
+
+@router.post("/customer/login", response_model=CustomerLoginResponse)
+async def customer_login(payload: CustomerLoginRequest):
+    """Authenticate customer via OAuth provider (Google), return JWT and status."""
+    provider = get_auth_provider(payload.provider)
+    user_info = await provider.authenticate(payload.credential)
+
+    # 1. Check/create CustomerAccount
+    account = await CustomerAccount.find_one(CustomerAccount.google_id == user_info["uid"])
+    if not account:
+        account = CustomerAccount(
+            google_id=user_info["uid"],
+            email=user_info["email"],
+            email_verified=user_info["email_verified"],
+            created_at=datetime.utcnow(),
+            last_login=datetime.utcnow()
+        )
+        await account.insert()
+    else:
+        account.last_login = datetime.utcnow()
+        await account.save()
+
+    # 2. Check/create CustomerProfile
+    profile = await CustomerProfile.find_one(CustomerProfile.account_id == account.id)
+    if not profile:
+        username = await generate_unique_username(user_info["name"])
+        profile = CustomerProfile(
+            account_id=account.id, # type: ignore
+            uuid=str(uuid.uuid4()),
+            username=username,
+            display_name=user_info["name"],
+            email=user_info["email"],
+            profile_photo=user_info["profile_picture"],
+            networking_mode=NetworkingMode.NETWORKING,
+            is_visible=True,
+            onboarding_completed=False,
+            created_at=datetime.utcnow(),
+            updated_at=datetime.utcnow(),
+            last_active=datetime.utcnow()
+        )
+        await profile.insert()
+    else:
+        profile.last_active = datetime.utcnow()
+        await profile.save()
+
+    # 3. Handle QR Token joining if provided
+    venue_id_str = None
+    venue_name = None
+    if payload.venue_qr_token:
+        branch = await Branch.find_one({
+            "$or": [
+                {"qr_token": payload.venue_qr_token},
+                {"menu_qr_token": payload.venue_qr_token}
+            ]
+        })
+        if branch:
+            venue_id_str = str(branch.id)
+            venue_name = branch.name
+            profile.current_venue_id = branch.id
+            
+            # Update recent visits
+            if not profile.recent_visits or profile.recent_visits[-1] != branch.id:
+                profile.recent_visits.append(branch.id)
+                if len(profile.recent_visits) > 10:
+                    profile.recent_visits.pop(0)
+            await profile.save()
+
+            # Record VenueSession
+            session_rec = VenueSession(
+                user_id=profile.id, # type: ignore
+                venue_id=branch.id,
+                joined_at=datetime.utcnow(),
+                last_active=datetime.utcnow(),
+                is_active=True
+            )
+            await session_rec.insert()
+
+    # 4. Create JWT Token (role: "guest", profile_id)
+    token = create_access_token(
+        profile.display_name,
+        {
+            "role": "guest",
+            "venue_id": venue_id_str,
+            "profile_id": str(profile.id)
+        },
+        expires_minutes=180
+    )
+
+    return CustomerLoginResponse(
+        token=token,
+        name=profile.display_name,
+        username=profile.username,
+        onboarding_completed=profile.onboarding_completed,
+        profile_photo=profile.profile_photo,
+        venue_id=venue_id_str,
+        venue_name=venue_name
+    )
+
+@router.post("/customer/onboarding")
+async def customer_onboarding(
+    payload: CustomerOnboardingRequest,
+    customer: CustomerProfile = Depends(get_current_customer)
+):
+    """Complete lightweight onboarding for first-time customer login."""
+    customer.headline = payload.headline
+    customer.company = payload.company
+    customer.college = payload.college
+    
+    # Allow maximum 3 interests
+    customer.interests = payload.interests[:3]
+    customer.professional_tags = payload.professional_tags
+    
+    # Parse Networking Goal
+    try:
+        customer.networking_mode = NetworkingMode(payload.networking_mode)
+    except ValueError:
+        customer.networking_mode = NetworkingMode.NETWORKING
+
+    customer.onboarding_completed = True
+    customer.updated_at = datetime.utcnow()
+    await customer.save()
+
+    # Handle social links
+    if payload.social_links:
+        # Upsert SocialLink document
+        sl = await SocialLink.find_one(SocialLink.user_id == customer.id)
+        if not sl:
+            sl = SocialLink(
+                user_id=customer.id, # type: ignore
+                linkedin=payload.social_links.get("linkedin"),
+                instagram=payload.social_links.get("instagram"),
+                github=payload.social_links.get("github"),
+                portfolio=payload.social_links.get("portfolio"),
+                website=payload.social_links.get("website")
+            )
+            await sl.insert()
+        else:
+            sl.linkedin = payload.social_links.get("linkedin", sl.linkedin)
+            sl.instagram = payload.social_links.get("instagram", sl.instagram)
+            sl.github = payload.social_links.get("github", sl.github)
+            sl.portfolio = payload.social_links.get("portfolio", sl.portfolio)
+            sl.website = payload.social_links.get("website", sl.website)
+            await sl.save()
+
+    return {"status": "success", "profile": customer}
+
