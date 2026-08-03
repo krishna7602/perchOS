@@ -208,28 +208,39 @@ export default function JoinPage() {
 
   const handleOnboardingSubmit = async (isSkipped = false) => {
     setIsSubmitting(true);
+    setError("");
+    const activeToken = authToken || sessionStorage.getItem("perch_chat_token") || "";
+    const targetVenueId = venue?.id || sessionStorage.getItem("perch_venue_id") || "";
+
     try {
       if (!isSkipped) {
-        await customerOnboarding(authToken, {
-          headline: headline || undefined,
-          company: company || undefined,
-          college: college || undefined,
+        const cleanedSocialLinks = {
+          linkedin: socialLinks.linkedin.trim() || undefined,
+          instagram: socialLinks.instagram.trim() || undefined,
+          github: socialLinks.github.trim() || undefined,
+          website: socialLinks.website.trim() || undefined,
+        };
+
+        await customerOnboarding(activeToken, {
+          headline: headline.trim() || undefined,
+          company: company.trim() || undefined,
+          college: college.trim() || undefined,
           interests: selectedInterests,
           professional_tags: selectedTags,
           networking_mode: networkingGoal,
-          social_links: socialLinks,
+          social_links: cleanedSocialLinks,
         });
       } else {
-        // Skip onboarding still submits networking mode
-        await customerOnboarding(authToken, {
+        await customerOnboarding(activeToken, {
           networking_mode: "Networking",
         });
       }
 
       setStep("joining");
-      router.push(`/venue/${venue?.id}/chat`);
-    } catch {
-      setError("Failed to save onboarding. Please try again.");
+      router.push(`/venue/${targetVenueId}/chat`);
+    } catch (err: any) {
+      console.error("Onboarding error:", err);
+      setError(err?.detail || err?.message || "Failed to save profile. Please try again.");
       setIsSubmitting(false);
     }
   };
@@ -274,7 +285,7 @@ export default function JoinPage() {
               Welcome to {venue.name}
             </h1>
             <p className="text-sm px-4" style={{ color: "var(--color-muted)" }}>
-              Sign in once to order food, join the community, chat with other visitors, and save your preferences.
+              Sign in once with Google to order food, join the community, chat with other visitors, and save your preferences.
             </p>
           </div>
 
@@ -301,39 +312,6 @@ export default function JoinPage() {
               </svg>
               Continue with Google
             </button>
-
-            {/* Development bypass panel */}
-            <div className="relative my-6 text-center">
-              <div className="absolute inset-0 flex items-center" aria-hidden="true">
-                <div className="w-full border-t border-gray-200"></div>
-              </div>
-              <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-white px-2 text-gray-400 font-medium" style={{ background: "var(--color-surface)" }}>
-                  Dev/Demo Accounts
-                </span>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <button
-                onClick={() => handleDevBypass("Ram Krishna", "ramkrishna")}
-                disabled={isSubmitting}
-                className="flex flex-col items-center justify-center p-3 rounded-xl border border-dashed transition-all hover:bg-amber-50/20 active:scale-95 cursor-pointer text-xs font-medium"
-                style={{ borderColor: "var(--color-border)", color: "var(--color-text)" }}
-              >
-                <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center mb-1 text-blue-700">RK</div>
-                Ram Krishna
-              </button>
-              <button
-                onClick={() => handleDevBypass("Ananya Sen", "ananyasen")}
-                disabled={isSubmitting}
-                className="flex flex-col items-center justify-center p-3 rounded-xl border border-dashed transition-all hover:bg-amber-50/20 active:scale-95 cursor-pointer text-xs font-medium"
-                style={{ borderColor: "var(--color-border)", color: "var(--color-text)" }}
-              >
-                <div className="w-8 h-8 rounded-full bg-pink-100 flex items-center justify-center mb-1 text-pink-700">AS</div>
-                Ananya Sen
-              </button>
-            </div>
           </div>
         </div>
       )}
@@ -360,6 +338,12 @@ export default function JoinPage() {
               Take 20 seconds to stand out, or skip to jump straight in.
             </p>
           </div>
+
+          {error && (
+            <div className="p-3 rounded-xl bg-red-50 text-red-600 border border-red-200 text-xs font-semibold text-center">
+              {error}
+            </div>
+          )}
 
           <div 
             className="rounded-3xl p-6 border space-y-4"

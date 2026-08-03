@@ -306,22 +306,28 @@ async def customer_onboarding(
     if payload.social_links:
         # Upsert SocialLink document
         sl = await SocialLink.find_one(SocialLink.user_id == customer.id)
+        
+        cleaned_links = {
+            k: (v.strip() if isinstance(v, str) and v.strip() else None)
+            for k, v in payload.social_links.items()
+        }
+
         if not sl:
             sl = SocialLink(
                 user_id=customer.id, # type: ignore
-                linkedin=payload.social_links.get("linkedin"),
-                instagram=payload.social_links.get("instagram"),
-                github=payload.social_links.get("github"),
-                portfolio=payload.social_links.get("portfolio"),
-                website=payload.social_links.get("website")
+                linkedin=cleaned_links.get("linkedin"),
+                instagram=cleaned_links.get("instagram"),
+                github=cleaned_links.get("github"),
+                portfolio=cleaned_links.get("portfolio"),
+                website=cleaned_links.get("website")
             )
             await sl.insert()
         else:
-            sl.linkedin = payload.social_links.get("linkedin", sl.linkedin)
-            sl.instagram = payload.social_links.get("instagram", sl.instagram)
-            sl.github = payload.social_links.get("github", sl.github)
-            sl.portfolio = payload.social_links.get("portfolio", sl.portfolio)
-            sl.website = payload.social_links.get("website", sl.website)
+            sl.linkedin = cleaned_links.get("linkedin", sl.linkedin)
+            sl.instagram = cleaned_links.get("instagram", sl.instagram)
+            sl.github = cleaned_links.get("github", sl.github)
+            sl.portfolio = cleaned_links.get("portfolio", sl.portfolio)
+            sl.website = cleaned_links.get("website", sl.website)
             await sl.save()
 
     return {"status": "success", "profile": customer}
