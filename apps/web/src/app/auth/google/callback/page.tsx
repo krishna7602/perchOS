@@ -28,10 +28,12 @@ function GoogleCallbackContent() {
 
     // Exchange the auth code for an ID token via our backend
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || "";
+    const redirectUri = `${window.location.origin}/auth/google/callback`;
+
     fetch(`${apiUrl}/auth/google/exchange`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ code, redirect_uri: `${window.location.origin}/auth/google/callback` }),
+      body: JSON.stringify({ code, redirect_uri: redirectUri }),
     })
       .then(async (res) => {
         if (!res.ok) {
@@ -40,20 +42,42 @@ function GoogleCallbackContent() {
         }
         return res.json();
       })
-      .then((data) => {
-        // Send the ID token back to the parent (join page) window
-        if (window.opener) {
+      .then(async (data) => {
+        if (window.opener && !window.opener.closed) {
           window.opener.postMessage(
             { type: "GOOGLE_AUTH_CALLBACK", credential: data.id_token, state },
             window.location.origin
           );
           setStatus("success");
-          // Auto-close popup after short delay
           setTimeout(() => window.close(), 500);
         } else {
-          // Not in popup — redirect back to join page with token
-          setStatus("error");
-          setErrorMsg("Please use the sign-in button on the venue page.");
+          // Full-page redirect mode: authenticate customer directly and redirect
+          try {
+            const { customerLogin } = await import("@/lib/api");
+            const loginRes = await customerLogin("google", data.id_token, state || undefined);
+            
+            sessionStorage.setItem("perch_chat_token", loginRes.token);
+            sessionStorage.setItem("perch_handle", loginRes.name);
+            sessionStorage.setItem("perch_username", loginRes.username);
+            if (loginRes.venue_name) {
+              sessionStorage.setItem("perch_venue_name", loginRes.venue_name);
+            }
+            if (loginRes.venue_id) {
+              sessionStorage.setItem("perch_venue_id", loginRes.venue_id);
+            }
+
+            setStatus("success");
+
+            if (loginRes.onboarding_completed) {
+              const targetVenueId = loginRes.venue_id || "";
+              window.location.href = targetVenueId ? `/venue/${targetVenueId}/chat` : "/";
+            } else {
+              window.location.href = `/join/${state}?step=onboarding&token=${encodeURIComponent(loginRes.token)}&name=${encodeURIComponent(loginRes.name)}&username=${encodeURIComponent(loginRes.username)}`;
+            }
+          } catch (err: any) {
+            setStatus("error");
+            setErrorMsg(err.message || err.detail || "Authentication failed.");
+          }
         }
       })
       .catch((err) => {

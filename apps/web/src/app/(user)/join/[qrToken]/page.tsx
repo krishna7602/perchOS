@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useEffect, useState, Suspense } from "react";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { getVenueByQr, customerLogin, customerOnboarding } from "@/lib/api";
 import { Loader } from "@/components/ui/Loader";
 import { Globe, Sparkles, ChevronRight, User } from "lucide-react";
@@ -13,9 +13,10 @@ interface Venue {
   wifi_password: string | null;
 }
 
-export default function JoinPage() {
+function JoinPageContent() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const qrToken = params?.qrToken as string;
 
   const [venue, setVenue] = useState<Venue | null>(null);
@@ -79,7 +80,26 @@ export default function JoinPage() {
       });
   }, [qrToken]);
 
-  // Listen for Google OAuth callback message from popup
+  // Restore onboarding state if returning from full-page OAuth redirect
+  useEffect(() => {
+    if (!searchParams) return;
+    const urlStep = searchParams.get("step");
+    const urlToken = searchParams.get("token");
+    const urlName = searchParams.get("name");
+    const urlUsername = searchParams.get("username");
+
+    if (urlStep === "onboarding" && urlToken) {
+      setStep("onboarding");
+      setAuthToken(urlToken);
+      setTempProfile({
+        name: urlName || "User",
+        profile_photo: null,
+        username: urlUsername || "user",
+      });
+    }
+  }, [searchParams]);
+
+  // Listen for Google OAuth callback message if in popup mode
   useEffect(() => {
     const handleMessage = async (event: MessageEvent) => {
       if (event.data?.type === "GOOGLE_AUTH_CALLBACK" && event.data?.credential) {
@@ -114,12 +134,14 @@ export default function JoinPage() {
       username: data.username,
     });
 
-    // Save tokens in sessionStorage for room access
     sessionStorage.setItem("perch_chat_token", data.token);
     sessionStorage.setItem("perch_handle", data.name);
     sessionStorage.setItem("perch_username", data.username);
     if (data.venue_name) {
       sessionStorage.setItem("perch_venue_name", data.venue_name);
+    }
+    if (data.venue_id || venue?.id) {
+      sessionStorage.setItem("perch_venue_id", data.venue_id || venue?.id || "");
     }
 
     if (data.onboarding_completed) {
@@ -133,15 +155,13 @@ export default function JoinPage() {
   const handleGoogleLogin = () => {
     const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
     if (!clientId) {
-      // No Google Client ID configured — use mock fallback for dev
       handleMockLogin();
       return;
     }
 
-    // Open Google OAuth consent screen in a popup window
     const redirectUri = `${window.location.origin}/auth/google/callback`;
     const scope = "openid email profile";
-    const state = qrToken; // pass QR token through state for CSRF + context
+    const state = qrToken;
     const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
       `client_id=${encodeURIComponent(clientId)}` +
       `&redirect_uri=${encodeURIComponent(redirectUri)}` +
@@ -149,18 +169,10 @@ export default function JoinPage() {
       `&scope=${encodeURIComponent(scope)}` +
       `&state=${encodeURIComponent(state)}` +
       `&access_type=offline` +
-      `&prompt=consent`;
+      `&prompt=select_account`;
 
-    const width = 500;
-    const height = 600;
-    const left = window.screenX + (window.outerWidth - width) / 2;
-    const top = window.screenY + (window.outerHeight - height) / 2;
-
-    window.open(
-      authUrl,
-      "google-auth-popup",
-      `width=${width},height=${height},left=${left},top=${top},scrollbars=yes`
-    );
+    // Direct redirect to Google Account Chooser (same as GitHub OAuth flow)
+    window.location.href = authUrl;
   };
 
   const handleMockLogin = async () => {
@@ -577,5 +589,19 @@ export default function JoinPage() {
         Powered by Perch Restaurant OS • Evolving to Connect Communities
       </footer>
     </div>
+  );
+}
+
+export default function JoinPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center" style={{ background: "var(--color-bg)" }}>
+          <Loader label="Loading venue details..." />
+        </div>
+      }
+    >
+      <JoinPageContent />
+    </Suspense>
   );
 }
