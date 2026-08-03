@@ -35,10 +35,10 @@ async def discover_profiles(
     }
 
     # Mode filtering logic
-    if customer.mode == NetworkingMode.HIDDEN:
+    if customer.networking_mode == NetworkingMode.HIDDEN:
         return DiscoveryResponse(profiles=[], total=0, page=page, size=size)
     else:
-        query["mode"] = customer.mode
+        query["networking_mode"] = customer.networking_mode
 
     # Pagination
     skip = (page - 1) * size

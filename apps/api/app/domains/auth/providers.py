@@ -32,10 +32,13 @@ class GoogleAuthProvider(AuthProvider):
             or (settings.ENVIRONMENT == "development" and not settings.GOOGLE_CLIENT_ID)
         ):
             # Parse dummy data from mock token or return standard dev user info
-            # Format expected: mock_<google_id>_<email_username>
-            parts = credential.split("_")
-            google_id = parts[1] if len(parts) > 1 else "dev_mock_google_id_123"
-            username = parts[2] if len(parts) > 2 else "john.doe"
+            # Format: mock_{anything}_{email_username}
+            # The full credential (minus "mock_" prefix) is used as a stable google_id
+            # to ensure each mock token creates a distinct account
+            raw = credential[5:] if credential.startswith("mock_") else credential
+            parts = raw.rsplit("_", 1)  # split from right to get username as last part
+            google_id = f"mock_{raw}"  # full token as unique ID
+            username = parts[-1] if parts else "john.doe"
             email = f"{username}@gmail.com"
             name = username.replace(".", " ").title()
             
