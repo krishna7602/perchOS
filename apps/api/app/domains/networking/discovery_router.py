@@ -27,11 +27,10 @@ async def discover_profiles(
     if not customer.current_venue_id:
         return DiscoveryResponse(profiles=[], total=0, page=page, size=size)
 
-    # Base query: same venue, visible, and not the current user
+    # Base query: same venue and visible
     query = {
         "current_venue_id": customer.current_venue_id,
         "is_visible": True,
-        "_id": {"$ne": customer.id},
     }
 
     # Mode filtering logic

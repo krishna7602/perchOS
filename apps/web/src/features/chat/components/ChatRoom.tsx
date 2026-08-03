@@ -113,7 +113,10 @@ export function ChatRoom({
           const data = JSON.parse(event.data);
           if (data.type === "presence" && Array.isArray(data.online)) {
             const cleanOnline = data.online.filter((h: string) => h && !/^\d+$/.test(h.trim()));
-            setOnlineUsers(cleanOnline);
+            setOnlineUsers((prev) => {
+              const cleanPrev = prev.filter((h: string) => !/^\d+$/.test(h.trim()));
+              return Array.from(new Set([...cleanPrev, ...cleanOnline]));
+            });
           }
         } catch (e) {
           console.error("WS parse error:", e);
