@@ -66,6 +66,14 @@ async def discover_profiles(
     for p in profiles:
         p_dict = p.model_dump(exclude={"device_id", "created_at", "updated_at"})
         p_dict["id"] = str(p.id)
+        if p.account_id:
+            p_dict["account_id"] = str(p.account_id)
+        if p.current_venue_id:
+            p_dict["current_venue_id"] = str(p.current_venue_id)
+        p_dict["recent_visits"] = [str(v) for v in p.recent_visits]
+        p_dict["connections"] = [str(c) for c in p.connections]
+        p_dict["favorite_cafes"] = [str(f) for f in p.favorite_cafes]
+        p_dict["blocked_users"] = [str(b) for b in p.blocked_users]
         p_dict["match_percentage"] = calculate_match_percentage(p)
         results.append(p_dict)
         

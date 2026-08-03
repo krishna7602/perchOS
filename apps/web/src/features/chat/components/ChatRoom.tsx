@@ -280,20 +280,15 @@ export function ChatRoom({
         </div>
 
         {/* User Google Profile Badge */}
-        <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 shadow-xs">
+        <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/20 shadow-xs">
           {profilePhoto ? (
-            <img src={profilePhoto} alt={handle} className="w-7 h-7 rounded-full object-cover border border-amber-500/40" />
+            <img src={profilePhoto} alt={handle} className="w-6 h-6 rounded-full object-cover border border-amber-500/40" />
           ) : (
-            <div className="w-7 h-7 rounded-full bg-amber-600 text-white text-xs flex items-center justify-center font-bold">
+            <div className="w-6 h-6 rounded-full bg-amber-600 text-white text-xs flex items-center justify-center font-bold">
               {handle ? handle.charAt(0).toUpperCase() : "U"}
             </div>
           )}
-          <div className="flex flex-col text-left">
-            <span className="text-xs font-semibold text-gray-900 leading-tight">{handle}</span>
-            {userEmail && (
-              <span className="text-[10px] text-gray-500 leading-none truncate max-w-[140px]">{userEmail}</span>
-            )}
-          </div>
+          <span className="text-xs font-bold text-gray-900 leading-tight">{handle}</span>
         </div>
 
         <div className="flex items-center gap-2">
