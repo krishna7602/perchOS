@@ -153,16 +153,15 @@ function JoinPageContent() {
   };
 
   const handleGoogleLogin = () => {
-    const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
-    if (!clientId) {
-      handleMockLogin();
-      return;
-    }
+    const clientId =
+      process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ||
+      "325995682940-n5v4mpl5v8kijcabe8l8jnkv1cojknt9.apps.googleusercontent.com";
 
     const redirectUri = `${window.location.origin}/auth/google/callback`;
     const scope = "openid email profile";
     const state = qrToken;
-    const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
+    const authUrl =
+      `https://accounts.google.com/o/oauth2/v2/auth?` +
       `client_id=${encodeURIComponent(clientId)}` +
       `&redirect_uri=${encodeURIComponent(redirectUri)}` +
       `&response_type=code` +
@@ -171,7 +170,7 @@ function JoinPageContent() {
       `&access_type=offline` +
       `&prompt=select_account`;
 
-    // Direct redirect to Google Account Chooser (same as GitHub OAuth flow)
+    // Direct redirect to Google Account Chooser screen
     window.location.href = authUrl;
   };
 

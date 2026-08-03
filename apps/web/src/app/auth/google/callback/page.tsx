@@ -27,7 +27,7 @@ function GoogleCallbackContent() {
     }
 
     // Exchange the auth code for an ID token via our backend
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "";
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "https://perchos.onrender.com";
     const redirectUri = `${window.location.origin}/auth/google/callback`;
 
     fetch(`${apiUrl}/auth/google/exchange`, {
