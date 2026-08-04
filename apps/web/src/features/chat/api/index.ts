@@ -148,7 +148,7 @@ export function getVenuePolls(venueId: string, token: string) {
   return apiFetch<{
     polls: {
       id: string;
-      question: str;
+      question: string;
       creator_handle: string;
       created_at: string;
       total_votes: number;
