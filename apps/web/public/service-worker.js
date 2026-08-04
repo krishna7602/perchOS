@@ -18,6 +18,9 @@ self.addEventListener('push', function(event) {
       actions = [
         { action: 'accept', title: 'Accept' }
       ];
+    } else if (data.type === 'order_accepted') {
+      title = 'Order Accepted';
+      body = data.message || `${data.order_token} order is taken by ${data.chef_name}`;
     }
 
     const options = {

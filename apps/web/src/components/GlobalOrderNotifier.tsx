@@ -88,6 +88,11 @@ export function GlobalOrderNotifier({ token, venueId, role }: { token: string; v
               playNotificationSound();
               showBrowserNotification("Order Ready for Pickup!", `Order ${data.payload.order_token} is ready for pickup.`);
             }
+          } else if (currentRole === "manager" || currentRole === "owner") {
+            if (data.type === "order_accepted") {
+              playNotificationSound();
+              showBrowserNotification("Order Accepted", data.message || `${data.order_token} order is taken by ${data.chef_name}`);
+            }
           }
         } catch (e) {}
       };

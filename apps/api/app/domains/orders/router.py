@@ -415,7 +415,7 @@ async def accept_order(order_id: str, user: User = Depends(RequireRole([Role.CHE
         "chef_id": str(user.id),
         "chef_name": user.name,
         "venue_name": branch.name,
-        "message": f"Order {order.order_token} accepted by {user.name}"
+        "message": f"{order.order_token} order is taken by {user.name}"
     }
 
     # 1. Broadcast to branch (Admin Dashboard, Kitchen, Waiters)
@@ -476,7 +476,7 @@ async def reject_order(order_id: str, user: User = Depends(RequireRole([Role.CHE
 
 
 @router.post("/admin/orders/{order_id}/assign-waiter")
-async def assign_waiter(order_id: str, user: User = Depends(RequireRole([Role.WAITER]))):
+async def assign_waiter(order_id: str, user: User = Depends(RequireRole([Role.OWNER, Role.MANAGER, Role.WAITER]))):
     oid = PydanticObjectId(order_id)
     order = await Order.get(oid)
     if not order:
