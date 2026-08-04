@@ -329,3 +329,138 @@ async def room_ws(
                 except Exception:
                     pass
 
+
+# ── POLLS ENDPOINTS ──
+
+class CreatePollRequest(BaseModel):
+    question: str
+    options: list[str]
+
+
+class VotePollRequest(BaseModel):
+    option_id: str
+
+
+@router.get("/polls/{venue_id}")
+async def get_venue_polls(
+    venue_id: str,
+    customer: CustomerProfile = Depends(get_current_customer),
+):
+    """Get all active polls for a venue."""
+    from app.domains.networking.models import VenuePoll
+    try:
+        v_id = PydanticObjectId(venue_id)
+    except Exception:
+        raise HTTPException(status_code=400, detail="invalid_venue_id")
+
+    polls = await VenuePoll.find(
+        VenuePoll.venue_id == v_id,
+        VenuePoll.is_active == True
+    ).sort("-created_at").to_list()
+
+    user_identifier = customer.display_name
+
+    response = []
+    for poll in polls:
+        total_votes = sum(len(opt.voters) for opt.voters in poll.options)
+        voted_option_id = None
+
+        options_data = []
+        for opt in poll.options:
+            v_count = len(opt.voters)
+            percentage = round((v_count / total_votes * 100), 1) if total_votes > 0 else 0
+            if user_identifier in opt.voters:
+                voted_option_id = opt.id
+            options_data.append({
+                "id": opt.id,
+                "text": opt.text,
+                "votes": v_count,
+                "percentage": percentage
+            })
+
+        response.append({
+            "id": str(poll.id),
+            "question": poll.question,
+            "creator_handle": poll.creator_handle,
+            "created_at": poll.created_at.isoformat(),
+            "total_votes": total_votes,
+            "options": options_data,
+            "voted_option_id": voted_option_id
+        })
+
+    return {"polls": response}
+
+
+@router.post("/polls/{venue_id}")
+async def create_venue_poll(
+    venue_id: str,
+    payload: CreatePollRequest,
+    customer: CustomerProfile = Depends(get_current_customer),
+):
+    """Create a new poll for a venue."""
+    from app.domains.networking.models import VenuePoll, PollOption
+    import uuid
+
+    if not payload.question.strip() or len(payload.options) < 2:
+        raise HTTPException(status_code=400, detail="poll_requires_question_and_2_options")
+
+    try:
+        v_id = PydanticObjectId(venue_id)
+    except Exception:
+        raise HTTPException(status_code=400, detail="invalid_venue_id")
+
+    options = [
+        PollOption(id=f"opt_{uuid.uuid4().hex[:6]}", text=opt_text.strip(), voters=[])
+        for opt_text in payload.options if opt_text.strip()
+    ]
+
+    poll = VenuePoll(
+        venue_id=v_id,
+        creator_handle=customer.display_name,
+        creator_profile_id=customer.id, # type: ignore
+        question=payload.question.strip(),
+        options=options,
+        is_active=True
+    )
+    await poll.insert()
+
+    return {"status": "success", "poll_id": str(poll.id)}
+
+
+@router.post("/polls/{venue_id}/{poll_id}/vote")
+async def vote_venue_poll(
+    venue_id: str,
+    poll_id: str,
+    payload: VotePollRequest,
+    customer: CustomerProfile = Depends(get_current_customer),
+):
+    """Vote for an option in a poll."""
+    from app.domains.networking.models import VenuePoll
+
+    try:
+        p_id = PydanticObjectId(poll_id)
+    except Exception:
+        raise HTTPException(status_code=400, detail="invalid_poll_id")
+
+    poll = await VenuePoll.get(p_id)
+    if not poll or not poll.is_active:
+        raise HTTPException(status_code=404, detail="poll_not_found")
+
+    user_identifier = customer.display_name
+
+    # Remove user's vote from any previous option in this poll
+    for opt in poll.options:
+        if user_identifier in opt.voters:
+            opt.voters.remove(user_identifier)
+
+    # Add vote to target option
+    target = next((opt for opt in poll.options if opt.id == payload.option_id), None)
+    if not target:
+        raise HTTPException(status_code=404, detail="option_not_found")
+
+    target.voters.append(user_identifier)
+    await poll.save()
+
+    return {"status": "success"}
+
+

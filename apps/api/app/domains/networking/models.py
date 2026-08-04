@@ -215,3 +215,24 @@ class VenueChatMessage(Document):
     class Settings:
         name = "venue_chat_messages"
         indexes = ["venue_id", "created_at"]
+
+
+class PollOption(BaseModel):
+    id: str
+    text: str
+    voters: list[str] = Field(default_factory=list)  # handles or profile_ids
+
+
+class VenuePoll(Document):
+    venue_id: PydanticObjectId
+    creator_handle: str
+    creator_profile_id: PydanticObjectId | None = None
+    question: str
+    options: list[PollOption]
+    is_active: bool = True
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+    class Settings:
+        name = "venue_polls"
+        indexes = ["venue_id", "created_at", "is_active"]
+

@@ -24,7 +24,7 @@ async def init_db():
     from app.domains.networking.models import (
         CustomerAccount, CustomerProfile, SocialLink, Interest, ProfessionalTag,
         VenueSession, Connection, ConnectionRequest, DirectMessage, UserPreference,
-        ProfileVisibility, UserStatus, VenueChatMessage
+        ProfileVisibility, UserStatus, VenueChatMessage, VenuePoll
     )
 
     await init_beanie(
@@ -33,7 +33,7 @@ async def init_db():
             User, Attendance, Restaurant, Branch, MenuItem, Order, Counter, Payment, TeamChannel, TeamMessage,
             CustomerAccount, CustomerProfile, SocialLink, Interest, ProfessionalTag,
             VenueSession, Connection, ConnectionRequest, DirectMessage, UserPreference,
-            ProfileVisibility, UserStatus, VenueChatMessage, PushSubscription
+            ProfileVisibility, UserStatus, VenueChatMessage, VenuePoll, PushSubscription
         ],
     )
 

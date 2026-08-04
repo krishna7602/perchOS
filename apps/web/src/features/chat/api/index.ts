@@ -144,6 +144,37 @@ export function sendDirectMessage(connectionId: string, content: string, token: 
   });
 }
 
+export function getVenuePolls(venueId: string, token: string) {
+  return apiFetch<{
+    polls: {
+      id: string;
+      question: str;
+      creator_handle: string;
+      created_at: string;
+      total_votes: number;
+      options: { id: string; text: string; votes: number; percentage: number }[];
+      voted_option_id: string | null;
+    }[];
+  }>(`/polls/${venueId}`, { token });
+}
+
+export function createVenuePoll(venueId: string, question: string, options: string[], token: string) {
+  return apiFetch<{ status: string; poll_id: string }>(`/polls/${venueId}`, {
+    method: "POST",
+    body: JSON.stringify({ question, options }),
+    token,
+  });
+}
+
+export function voteVenuePoll(venueId: string, pollId: string, optionId: string, token: string) {
+  return apiFetch<{ status: string }>(`/polls/${venueId}/${pollId}/vote`, {
+    method: "POST",
+    body: JSON.stringify({ option_id: optionId }),
+    token,
+  });
+}
+
+
 
 
 

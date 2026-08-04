@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { OnlineUsersBar } from "./OnlineUsersBar";
 import { DMPanel } from "./DMPanel";
-import { Send, LogOut, UtensilsCrossed, X, Star, Link as LinkIcon, Compass, Sparkles, MessageSquare } from "lucide-react";
+import { Send, LogOut, UtensilsCrossed, X, Star, Link as LinkIcon, Compass, Sparkles, MessageSquare, Vote } from "lucide-react";
 import Link from "next/link";
 import { 
   getVenueMessages, 
@@ -445,6 +445,19 @@ export function ChatRoom({
         </div>
 
         <div className="flex items-center gap-2">
+          <Link
+            href={`/venue/${venueId}/polls`}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all hover:scale-105 active:scale-95 shadow-xs"
+            style={{
+              background: "rgba(217, 119, 6, 0.12)",
+              color: "#b45309",
+              border: "1px solid rgba(217, 119, 6, 0.25)"
+            }}
+          >
+            <Vote size={14} />
+            Polls
+          </Link>
+
           {menuQrToken && (
             <Link
               href={`/venue/${venueId}/menu`}

@@ -2,7 +2,7 @@
 
 import { usePathname, useParams } from "next/navigation";
 import Link from "next/link";
-import { MessageSquare, UtensilsCrossed, ClipboardList } from "lucide-react";
+import { MessageSquare, Vote, UtensilsCrossed, ClipboardList } from "lucide-react";
 
 export default function GuestVenueLayout({
   children,
@@ -15,6 +15,7 @@ export default function GuestVenueLayout({
 
   const tabs = [
     { name: "Chat", path: `/venue/${venueId}/chat`, icon: MessageSquare },
+    { name: "Polls", path: `/venue/${venueId}/polls`, icon: Vote },
     { name: "Menu", path: `/venue/${venueId}/menu`, icon: UtensilsCrossed },
     { name: "Orders", path: `/venue/${venueId}/orders`, icon: ClipboardList },
   ];
