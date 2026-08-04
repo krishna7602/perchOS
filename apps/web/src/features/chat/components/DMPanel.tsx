@@ -47,107 +47,120 @@ export function DMPanel({
   };
 
   return (
-    <div
-      className="fixed inset-x-0 bottom-[64px] z-50 flex flex-col animate-slide-up"
-      style={{
-        maxHeight: "calc(70vh - 64px)",
-        background: "var(--color-surface)",
-        borderRadius: "var(--radius-lg) var(--radius-lg) 0 0",
-        boxShadow: "0 -4px 24px rgba(58, 46, 39, 0.2)",
-        borderTop: "1px solid var(--color-border)",
-      }}
-    >
-      {/* Header */}
+    <div className="fixed inset-0 bg-black/40 backdrop-blur-xs z-50 flex flex-col justify-end animate-fade-in">
       <div
-        className="flex items-center justify-between px-4 py-3 shrink-0"
-        style={{ borderBottom: "1px solid var(--color-border)" }}
+        className="w-full max-w-lg mx-auto flex flex-col animate-slide-up"
+        style={{
+          maxHeight: "calc(80vh - 64px)",
+          background: "var(--color-surface)",
+          borderRadius: "var(--radius-lg) var(--radius-lg) 0 0",
+          boxShadow: "0 -8px 32px rgba(58, 46, 39, 0.25)",
+          borderTop: "1px solid var(--color-border)",
+        }}
       >
-        <div>
-          <span className="text-sm font-medium" style={{ color: "var(--color-text)" }}>
-            💬 DM with {handle}
-          </span>
-        </div>
-        <button onClick={onClose} className="p-1 rounded-lg hover:bg-black/5 cursor-pointer transition-colors">
-          <X size={18} style={{ color: "var(--color-muted)" }} />
-        </button>
-      </div>
-
-      {/* Pending request prompt */}
-      {pendingRequest && !isAccepted && (
-        <div className="px-4 py-4 text-center" style={{ borderBottom: "1px solid var(--color-border)" }}>
-          <p className="text-sm mb-1" style={{ color: "var(--color-text)" }}>
-            <strong>{pendingRequest.from}</strong> wants to chat with you
-          </p>
-          {pendingRequest.body && (
-            <p className="text-xs mb-3 italic" style={{ color: "var(--color-muted)" }}>
-              &quot;{pendingRequest.body}&quot;
-            </p>
-          )}
-          <div className="flex gap-2 justify-center">
-            <Button variant="accent" onClick={onAccept}>
-              Accept
-            </Button>
-            <Button variant="ghost" onClick={onDecline}>
-              Decline
-            </Button>
-          </div>
-        </div>
-      )}
-
-      {/* Messages */}
-      <div className="flex-1 overflow-y-auto px-4 py-3 space-y-2">
-        {messages.map((msg, i) => (
-          <div
-            key={i}
-            className={`flex ${msg.isMine ? "justify-end" : "justify-start"}`}
-          >
-            <div
-              className="max-w-[80%] px-3 py-2 rounded-xl text-sm"
-              style={{
-                background: msg.isMine
-                  ? "var(--color-primary)"
-                  : "var(--color-bg)",
-                color: msg.isMine
-                  ? "var(--color-surface)"
-                  : "var(--color-text)",
-              }}
-            >
-              {msg.body}
+        {/* Header */}
+        <div
+          className="flex items-center justify-between px-5 py-3.5 shrink-0 bg-gradient-to-r from-amber-500/10 to-orange-500/5"
+          style={{ borderBottom: "1px solid var(--color-border)" }}
+        >
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-full bg-amber-500/20 text-amber-800 flex items-center justify-center font-bold text-xs border border-amber-500/30">
+              💬
+            </div>
+            <div>
+              <span className="text-sm font-bold text-gray-900 block leading-tight">
+                Direct Message
+              </span>
+              <span className="text-xs text-amber-800/60 font-semibold">with {handle}</span>
             </div>
           </div>
-        ))}
-        <div ref={messagesEndRef} />
-      </div>
-
-      {/* Input */}
-      {isAccepted && (
-        <div
-          className="flex items-center gap-2 px-4 py-3 shrink-0"
-          style={{ borderTop: "1px solid var(--color-border)" }}
-        >
-          <input
-            type="text"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleSend()}
-            placeholder="Type a message..."
-            className="flex-1 px-4 py-2.5 rounded-xl text-sm outline-none"
-            style={{
-              background: "var(--color-bg)",
-              border: "1.5px solid var(--color-border)",
-              color: "var(--color-text)",
-            }}
-          />
-          <button
-            onClick={handleSend}
-            disabled={!input.trim()}
-            className="p-2.5 rounded-xl transition-all cursor-pointer disabled:opacity-40"
-            style={{ background: "var(--color-primary)", color: "var(--color-surface)" }}
+          <button 
+            onClick={onClose} 
+            className="p-1.5 rounded-full hover:bg-black/5 cursor-pointer transition-all hover:rotate-90 duration-200"
           >
-            <Send size={16} />
+            <X size={18} style={{ color: "var(--color-muted)" }} />
           </button>
         </div>
-      )}
+
+        {/* Pending request prompt */}
+        {pendingRequest && !isAccepted && (
+          <div className="px-5 py-4 text-center bg-amber-500/5" style={{ borderBottom: "1px solid var(--color-border)" }}>
+            <p className="text-sm font-bold mb-1" style={{ color: "var(--color-text)" }}>
+              👋 <strong>{pendingRequest.from}</strong> wants to connect with you
+            </p>
+            {pendingRequest.body && (
+              <p className="text-xs mb-3 italic text-gray-600 bg-white p-2.5 rounded-xl border border-amber-900/10 max-w-sm mx-auto">
+                &quot;{pendingRequest.body}&quot;
+              </p>
+            )}
+            <div className="flex gap-2 justify-center">
+              <Button variant="accent" onClick={onAccept} className="shadow-xs hover:scale-105 active:scale-95 transition-all">
+                Accept Wave 👋
+              </Button>
+              <Button variant="ghost" onClick={onDecline} className="hover:bg-red-50 hover:text-red-600 transition-colors">
+                Decline
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* Messages */}
+        <div className="flex-1 overflow-y-auto px-5 py-4 space-y-2.5">
+          {messages.length === 0 ? (
+            <div className="text-center py-8 text-xs text-gray-400 italic">
+              No direct messages yet. Break the ice!
+            </div>
+          ) : (
+            messages.map((msg, i) => (
+              <div
+                key={i}
+                className={`flex animate-slide-up ${msg.isMine ? "justify-end" : "justify-start"}`}
+              >
+                <div
+                  className={`max-w-[80%] px-4 py-2.5 rounded-2xl text-sm leading-relaxed shadow-xs ${
+                    msg.isMine
+                      ? "bg-gradient-to-r from-[var(--color-primary)] to-[#996845] text-white rounded-br-xs"
+                      : "bg-white text-[var(--color-text)] border border-amber-900/10 rounded-bl-xs"
+                  }`}
+                >
+                  {msg.body}
+                </div>
+              </div>
+            ))
+          )}
+          <div ref={messagesEndRef} />
+        </div>
+
+        {/* Input */}
+        {isAccepted && (
+          <div
+            className="flex items-center gap-2 px-4 py-3 shrink-0"
+            style={{ borderTop: "1px solid var(--color-border)" }}
+          >
+            <input
+              type="text"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleSend()}
+              placeholder="Type a private message..."
+              className="flex-1 px-4 py-2.5 rounded-full text-sm outline-none transition-all focus:ring-2 focus:ring-amber-500/30"
+              style={{
+                background: "var(--color-bg)",
+                border: "1.5px solid var(--color-border)",
+                color: "var(--color-text)",
+              }}
+            />
+            <button
+              onClick={handleSend}
+              disabled={!input.trim()}
+              className="p-2.5 rounded-full transition-all duration-200 cursor-pointer disabled:opacity-40 hover:scale-105 active:scale-95 shadow-sm"
+              style={{ background: "var(--color-primary)", color: "var(--color-surface)" }}
+            >
+              <Send size={16} />
+            </button>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
