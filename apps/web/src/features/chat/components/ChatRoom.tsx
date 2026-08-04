@@ -151,11 +151,9 @@ export function ChatRoom({
         try {
           const data = JSON.parse(event.data);
           if (data.type === "presence" && Array.isArray(data.online)) {
+            // Replace (not merge) — only truly connected users appear as Live
             const cleanOnline = data.online.filter((h: string) => h && !/^\d+$/.test(h.trim()));
-            setOnlineUsers((prev) => {
-              const cleanPrev = prev.filter((h: string) => !/^\d+$/.test(h.trim()));
-              return Array.from(new Set([...cleanPrev, ...cleanOnline]));
-            });
+            setOnlineUsers(cleanOnline);
           } else if (data.type === "wave_notification") {
             setIncomingWave({
               waveId: data.wave_id,
@@ -180,7 +178,7 @@ export function ChatRoom({
     };
   }, [venueId, chatToken]);
 
-  // Poll Discovery profiles as fallback every 10 seconds
+  // Poll Discovery profiles for profile lookups only (NOT for live presence)
   useEffect(() => {
     const fetchDiscovery = async () => {
       try {
@@ -188,12 +186,9 @@ export function ChatRoom({
         if (data && data.profiles) {
           const realProfiles = data.profiles.filter((p: any) => p.display_name && !/^\d+$/.test(p.display_name.trim()));
           setActiveProfiles(realProfiles);
-          const handles = realProfiles.map((p: any) => p.display_name);
-          setOnlineUsers((prev) => {
-            const cleanPrev = prev.filter((h: string) => !/^\d+$/.test(h.trim()));
-            const merged = Array.from(new Set([...cleanPrev, ...handles]));
-            return merged;
-          });
+          // NOTE: Do NOT merge discovery profiles into onlineUsers.
+          // Discovery returns ALL registered profiles, not currently online ones.
+          // Only WebSocket presence data should set live user status.
         }
       } catch (err) {
         console.error("Error polling discovery", err);
@@ -600,8 +595,8 @@ export function ChatRoom({
 
       {/* Messages Feed + Polls Panel */}
       <div className="flex-1 min-h-0 flex relative overflow-hidden">
-        {/* Chat Messages */}
-        <div className={`flex-1 overflow-y-auto px-4 py-4 space-y-4 scroll-smooth transition-all duration-300 ${showPolls ? "hidden sm:block sm:flex-1" : "flex-1"}`}>
+        {/* Chat Messages — always visible */}
+        <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4 scroll-smooth">
           {messages.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full text-center p-8 animate-fade-in">
               <div className="relative mb-4">
@@ -695,15 +690,26 @@ export function ChatRoom({
           <div ref={messagesEndRef} />
         </div>
 
-        {/* ─── Inline Polls Panel ─── */}
+        {/* ─── Inline Polls Panel (bottom sheet overlay) ─── */}
         {showPolls && (
-          <div
-            className="w-full sm:w-[340px] sm:max-w-[340px] sm:min-w-[280px] flex flex-col border-l animate-slide-in-right"
-            style={{
-              background: "var(--color-surface)",
-              borderColor: "var(--color-border)",
-            }}
-          >
+          <>
+            {/* Backdrop */}
+            <div
+              className="absolute inset-0 bg-black/20 z-10 animate-fade-in"
+              onClick={() => setShowPolls(false)}
+            />
+            <div
+              className="absolute bottom-0 left-0 right-0 flex flex-col animate-slide-up z-20 rounded-t-2xl shadow-lg"
+              style={{
+                background: "var(--color-surface)",
+                borderTop: "1px solid var(--color-border)",
+                maxHeight: "65%",
+              }}
+            >
+              {/* Drag Handle */}
+              <div className="flex justify-center pt-2 pb-1 shrink-0">
+                <div className="w-10 h-1 rounded-full bg-gray-300" />
+              </div>
             {/* Polls Panel Header */}
             <div
               className="flex items-center justify-between px-3.5 py-2.5 shrink-0 border-b"
@@ -712,9 +718,9 @@ export function ChatRoom({
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => setShowPolls(false)}
-                  className="p-1 rounded-lg hover:bg-black/5 cursor-pointer transition-colors sm:hidden"
+                  className="p-1 rounded-lg hover:bg-black/5 cursor-pointer transition-colors"
                 >
-                  <ChevronLeft size={16} style={{ color: "var(--color-muted)" }} />
+                  <X size={16} style={{ color: "var(--color-muted)" }} />
                 </button>
                 <div className="flex items-center gap-1.5">
                   <Vote size={16} style={{ color: "var(--color-primary)" }} />
@@ -731,12 +737,7 @@ export function ChatRoom({
                   <Plus size={12} />
                   New
                 </button>
-                <button
-                  onClick={() => setShowPolls(false)}
-                  className="p-1 rounded-lg hover:bg-black/5 cursor-pointer transition-colors hidden sm:block"
-                >
-                  <X size={14} style={{ color: "var(--color-muted)" }} />
-                </button>
+
               </div>
             </div>
 
@@ -925,6 +926,7 @@ export function ChatRoom({
               </div>
             )}
           </div>
+          </>
         )}
       </div>
 
