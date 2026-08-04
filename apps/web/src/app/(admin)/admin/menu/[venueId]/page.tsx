@@ -45,8 +45,16 @@ export default function MenuManagePage() {
   };
 
   const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({});
+  const [searchQuery, setSearchQuery] = useState("");
 
-  const categories = items.reduce<Record<string, MenuItemData[]>>((acc, item) => {
+  const filteredItems = items.filter(item => {
+    const q = searchQuery.toLowerCase();
+    return (item.name || "").toLowerCase().includes(q) || 
+           (item.description || "").toLowerCase().includes(q) || 
+           (item.category || "").toLowerCase().includes(q);
+  });
+
+  const categories = filteredItems.reduce<Record<string, MenuItemData[]>>((acc, item) => {
     const cat = item.category || "misc";
     (acc[cat] = acc[cat] || []).push(item);
     return acc;
@@ -127,6 +135,22 @@ export default function MenuManagePage() {
           </Button>
         </div>
 
+        {/* Search Bar */}
+        <div className="relative mb-6">
+          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <svg className="h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+              <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" />
+            </svg>
+          </div>
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search for something funky... 🎷"
+            className="block w-full pl-10 pr-3 py-3 border border-gray-200 rounded-xl leading-5 bg-white placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)] sm:text-sm transition duration-150 ease-in-out shadow-sm"
+          />
+        </div>
+
         {/* Add/Edit form */}
         {showForm && (
           <form
@@ -176,8 +200,7 @@ export default function MenuManagePage() {
         ) : Object.keys(categories).length === 0 ? (
           <div className="text-center py-16">
             <p className="text-5xl mb-4">🍽️</p>
-            <p className="text-lg font-medium mb-2" style={{ color: "var(--color-text)" }}>No menu items yet</p>
-            <p className="text-sm" style={{ color: "var(--color-muted)" }}>Add items to build your menu.</p>
+            <p className="text-lg font-medium mb-2" style={{ color: "var(--color-text)" }}>No menu items match your search.</p>
           </div>
         ) : (
           <div className="space-y-4">

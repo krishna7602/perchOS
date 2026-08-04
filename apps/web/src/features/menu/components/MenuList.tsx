@@ -25,6 +25,7 @@ interface MenuListProps {
 
 export function MenuList({ items, isLoading, onAddToCart }: MenuListProps) {
   const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({});
+  const [searchQuery, setSearchQuery] = useState("");
 
   if (isLoading) {
     return (
@@ -36,24 +37,57 @@ export function MenuList({ items, isLoading, onAddToCart }: MenuListProps) {
     );
   }
 
+  // Filter items based on search query
+  const filteredItems = items.filter((item) => {
+    const query = searchQuery.toLowerCase();
+    return (
+      item.name.toLowerCase().includes(query) ||
+      (item.description?.toLowerCase() || "").includes(query) ||
+      item.category.toLowerCase().includes(query)
+    );
+  });
+
   // Group by category
-  const categories = items.reduce<Record<string, MenuItemData[]>>((acc, item) => {
+  const categories = filteredItems.reduce<Record<string, MenuItemData[]>>((acc, item) => {
     const cat = item.category || "misc";
     (acc[cat] = acc[cat] || []).push(item);
     return acc;
   }, {});
 
-  if (Object.keys(categories).length === 0) {
-    return (
-      <div className="text-center py-12">
-        <p className="text-4xl mb-3">🍽️</p>
-        <p style={{ color: "var(--color-muted)" }}>No menu items available yet.</p>
-      </div>
-    );
-  }
+  const funkyPlaceholders = [
+    "Search for a funky flavor... 🕺",
+    "Craving something specific? 🌮",
+    "Find your delicious bite... 🍕",
+    "Looking for a snack or a feast? 🍔"
+  ];
+  
+  // Choose a placeholder (for simplicity using a static one or pseudo-random)
+  const placeholder = funkyPlaceholders[0];
 
   return (
     <div className="space-y-4 p-4">
+      <div className="relative mb-6">
+        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+          <svg className="h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+            <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" />
+          </svg>
+        </div>
+        <input
+          type="text"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder={placeholder}
+          className="block w-full pl-10 pr-3 py-3 border border-gray-200 rounded-xl leading-5 bg-white placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)] sm:text-sm transition duration-150 ease-in-out shadow-sm"
+        />
+      </div>
+
+      {Object.keys(categories).length === 0 && (
+        <div className="text-center py-12">
+          <p className="text-4xl mb-3">🍽️</p>
+          <p style={{ color: "var(--color-muted)" }}>No menu items match your search.</p>
+        </div>
+      )}
+
       {Object.entries(categories).map(([category, catItems], index) => {
         const isExpanded = expandedCategories[category] !== undefined ? expandedCategories[category] : false;
 
