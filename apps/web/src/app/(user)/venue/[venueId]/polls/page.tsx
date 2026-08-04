@@ -126,14 +126,14 @@ export default function VenuePollsPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="h-full flex items-center justify-center">
         <Loader label="Loading venue polls..." />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen pb-24" style={{ background: "var(--color-bg)" }}>
+    <div className="h-full overflow-y-auto pb-24" style={{ background: "var(--color-bg)" }}>
       {/* Header */}
       <div
         className="sticky top-0 z-30 px-4 py-4 shrink-0"

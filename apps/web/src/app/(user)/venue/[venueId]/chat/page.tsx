@@ -35,7 +35,7 @@ export default function RoomPage() {
 
   if (!ready || !chatToken || !handle) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="h-full flex items-center justify-center">
         <Loader label="Connecting to room..." />
       </div>
     );

@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { OnlineUsersBar } from "./OnlineUsersBar";
 import { DMPanel } from "./DMPanel";
-import { Send, LogOut, UtensilsCrossed, X, Star, Link as LinkIcon, Compass, Sparkles, MessageSquare, Vote } from "lucide-react";
+import { Send, LogOut, UtensilsCrossed, X, Star, Link as LinkIcon, Compass, Sparkles, MessageSquare, Vote, Plus, Check, BarChart2, CheckCircle2, ChevronLeft } from "lucide-react";
 import Link from "next/link";
 import { 
   getVenueMessages, 
@@ -14,7 +14,10 @@ import {
   acceptWave, 
   getDirectMessages, 
   sendDirectMessage,
-  getPendingWaves
+  getPendingWaves,
+  getVenuePolls,
+  createVenuePoll,
+  voteVenuePoll
 } from "@/lib/api";
 import { playNotificationSound } from "@/lib/audio";
 
@@ -46,6 +49,23 @@ interface ChatRoomProps {
   onLeave: () => void;
 }
 
+interface PollOption {
+  id: string;
+  text: string;
+  votes: number;
+  percentage: number;
+}
+
+interface Poll {
+  id: string;
+  question: string;
+  creator_handle: string;
+  created_at: string;
+  total_votes: number;
+  options: PollOption[];
+  voted_option_id: string | null;
+}
+
 export function ChatRoom({
   venueId,
   venueName,
@@ -65,6 +85,15 @@ export function ChatRoom({
   // Profile Modal state
   const [selectedProfile, setSelectedProfile] = useState<any | null>(null);
   const [isLoadingProfile, setIsLoadingProfile] = useState(false);
+
+  // Polls state
+  const [showPolls, setShowPolls] = useState(false);
+  const [polls, setPolls] = useState<Poll[]>([]);
+  const [isPollsLoading, setIsPollsLoading] = useState(true);
+  const [showCreatePoll, setShowCreatePoll] = useState(false);
+  const [isPollSubmitting, setIsPollSubmitting] = useState(false);
+  const [pollQuestion, setPollQuestion] = useState("");
+  const [pollOptions, setPollOptions] = useState<string[]>(["", ""]);
   const [profileError, setProfileError] = useState("");
 
   // Wave notification state
@@ -365,8 +394,80 @@ export function ChatRoom({
   const profilePhoto = typeof window !== "undefined" ? sessionStorage.getItem("perch_profile_photo") : null;
   const userEmail = typeof window !== "undefined" ? sessionStorage.getItem("perch_email") : null;
 
+  // Poll helpers
+  const roundNum = (num: number, decimals: number) =>
+    Math.round(num * Math.pow(10, decimals)) / Math.pow(10, decimals);
+
+  const fetchPolls = async () => {
+    if (!venueId || !chatToken) return;
+    try {
+      const data = await getVenuePolls(venueId, chatToken);
+      setPolls(data.polls || []);
+    } catch (err) {
+      console.error("Error fetching polls", err);
+    } finally {
+      setIsPollsLoading(false);
+    }
+  };
+
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  useEffect(() => {
+    if (!showPolls) return;
+    fetchPolls();
+    const interval = setInterval(fetchPolls, 4000);
+    return () => clearInterval(interval);
+  }, [showPolls, venueId, chatToken]);
+
+  const handlePollVote = async (pollId: string, optionId: string) => {
+    if (!chatToken) return;
+    setPolls((prev) =>
+      prev.map((poll) => {
+        if (poll.id !== pollId) return poll;
+        const newTotal = poll.voted_option_id ? poll.total_votes : poll.total_votes + 1;
+        const updatedOptions = poll.options.map((opt) => {
+          let count = opt.votes;
+          if (poll.voted_option_id === opt.id) count -= 1;
+          if (opt.id === optionId) count += 1;
+          return { ...opt, votes: count, percentage: newTotal > 0 ? roundNum((count / newTotal) * 100, 1) : 0 };
+        });
+        return { ...poll, voted_option_id: optionId, total_votes: newTotal, options: updatedOptions };
+      })
+    );
+    try {
+      await voteVenuePoll(venueId, pollId, optionId, chatToken);
+      fetchPolls();
+    } catch (err) {
+      console.error("Failed to vote", err);
+      fetchPolls();
+    }
+  };
+
+  const handleCreatePoll = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const validOptions = pollOptions.map((o) => o.trim()).filter(Boolean);
+    if (!pollQuestion.trim() || validOptions.length < 2) return;
+    setIsPollSubmitting(true);
+    try {
+      await createVenuePoll(venueId, pollQuestion.trim(), validOptions, chatToken);
+      setPollQuestion("");
+      setPollOptions(["", ""]);
+      setShowCreatePoll(false);
+      fetchPolls();
+    } catch (err) {
+      console.error("Failed to create poll", err);
+    } finally {
+      setIsPollSubmitting(false);
+    }
+  };
+
+  const POLL_TEMPLATES = [
+    { question: "🎵 What song style should we play next?", options: ["Chill Lofi Beats 🎧", "Acoustic Pop 🎸", "Upbeat House 🕺"] },
+    { question: "☕ Best drink for this weather?", options: ["Iced Spanish Latte ❄️", "Hot Caramel Macchiato ☕", "Matcha Lemonade 🍵"] },
+    { question: "🎲 Anyone down for board games?", options: ["Yes! Count me in 🙋", "Maybe later ⌛", "Just relaxing 📖"] },
+  ];
+
   return (
-    <div className="flex flex-col h-[calc(100dvh-64px)] relative" style={{ background: "var(--color-bg)" }}>
+    <div className="flex flex-col h-full relative" style={{ background: "var(--color-bg)" }}>
       {/* Floating Wave Notification Toast */}
       {incomingWave && (
         <div className="fixed top-16 inset-x-4 max-w-md mx-auto z-50 animate-bounce">
@@ -445,18 +546,20 @@ export function ChatRoom({
         </div>
 
         <div className="flex items-center gap-2">
-          <Link
-            href={`/venue/${venueId}/polls`}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all hover:scale-105 active:scale-95 shadow-xs"
+          <button
+            onClick={() => { setShowPolls(!showPolls); if (!showPolls) { setIsPollsLoading(true); } }}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all hover:scale-105 active:scale-95 shadow-xs cursor-pointer ${
+              showPolls ? "ring-2 ring-amber-500/30" : ""
+            }`}
             style={{
-              background: "rgba(217, 119, 6, 0.12)",
+              background: showPolls ? "rgba(217, 119, 6, 0.22)" : "rgba(217, 119, 6, 0.12)",
               color: "#b45309",
               border: "1px solid rgba(217, 119, 6, 0.25)"
             }}
           >
             <Vote size={14} />
             Polls
-          </Link>
+          </button>
 
           {menuQrToken && (
             <Link
@@ -495,99 +598,334 @@ export function ChatRoom({
         onUserClick={handleUserClick}
       />
 
-      {/* Messages Feed */}
-      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4 scroll-smooth">
-        {messages.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full text-center p-8 animate-fade-in">
-            <div className="relative mb-4">
-              <div className="w-16 h-16 rounded-3xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-700 shadow-inner">
-                <Sparkles size={32} className="animate-pulse" />
-              </div>
-              <div className="absolute -bottom-1 -right-1 bg-emerald-500 text-white rounded-full p-1 shadow-md">
-                <Compass size={12} />
-              </div>
-            </div>
-            <h3 className="text-base font-bold text-gray-800 mb-1">Welcome to {venueName}!</h3>
-            <p className="text-xs text-gray-500 max-w-xs mb-6">
-              Connect with fellow patrons, share vibes, or order food together.
-            </p>
-            
-            {/* Quick Starter Pills */}
-            <div className="flex flex-wrap gap-2 justify-center max-w-sm">
-              {[
-                "👋 Hey everyone!",
-                "☕ What's good to drink here?",
-                "🍕 Anyone want to recommend a dish?",
-                "🎵 Love the music in here!"
-              ].map((starter, idx) => (
-                <button
-                  key={idx}
-                  onClick={() => {
-                    setInput(starter);
-                  }}
-                  className="px-3 py-1.5 rounded-full text-xs font-medium bg-white hover:bg-amber-50 text-amber-900 border border-amber-900/10 hover:border-amber-500/30 transition-all duration-200 hover:scale-105 active:scale-95 shadow-xs cursor-pointer"
-                >
-                  {starter}
-                </button>
-              ))}
-            </div>
-          </div>
-        ) : (
-          messages.map((msg) => {
-            const isMe = msg.from === handle;
-
-            return (
-              <div 
-                key={msg.id} 
-                className={`animate-slide-up flex gap-2.5 transition-all duration-200 ${
-                  isMe ? "flex-row-reverse" : "flex-row"
-                }`}
-              >
-                {/* Photo & Status */}
-                <div 
-                  className="relative shrink-0 cursor-pointer group self-end"
-                  onClick={() => msg.from && handleUserClick(msg.from)}
-                >
-                  <img 
-                    src={msg.profilePhoto || `https://api.dicebear.com/7.x/fun-emoji/svg?seed=${encodeURIComponent(msg.username || msg.from || "guest")}`} 
-                    alt={msg.from || ""} 
-                    className="w-9 h-9 rounded-full border-2 border-white shadow-xs object-cover bg-amber-50 group-hover:scale-110 transition-transform" 
-                  />
-                  <span className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-white flex items-center justify-center text-[8px] border border-gray-100 shadow-xs">
-                    {msg.statusEmoji || "🟢"}
-                  </span>
+      {/* Messages Feed + Polls Panel */}
+      <div className="flex-1 min-h-0 flex relative overflow-hidden">
+        {/* Chat Messages */}
+        <div className={`flex-1 overflow-y-auto px-4 py-4 space-y-4 scroll-smooth transition-all duration-300 ${showPolls ? "hidden sm:block sm:flex-1" : "flex-1"}`}>
+          {messages.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-full text-center p-8 animate-fade-in">
+              <div className="relative mb-4">
+                <div className="w-16 h-16 rounded-3xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-700 shadow-inner">
+                  <Sparkles size={32} className="animate-pulse" />
                 </div>
-
-                {/* Message Content */}
-                <div className={`flex flex-col space-y-1 max-w-[78%] ${isMe ? "items-end" : "items-start"}`}>
-                  <div className="flex items-baseline gap-1.5 px-1">
-                    <span 
-                      className="text-xs font-bold cursor-pointer hover:underline text-gray-800 flex items-center gap-1" 
-                      onClick={() => msg.from && handleUserClick(msg.from)}
-                    >
-                      <span>{isMe ? "You" : msg.from}</span>
-                      {msg.username && !isMe && (
-                        <span className="text-[10px] font-normal text-amber-800/60 font-mono">@{msg.username}</span>
-                      )}
-                    </span>
-                    <span className="text-[9px] text-gray-400">{msg.timestamp}</span>
-                  </div>
-
-                  <div 
-                    className={`px-4 py-2.5 rounded-2xl text-sm leading-relaxed shadow-xs transition-all ${
-                      isMe
-                        ? "bg-gradient-to-r from-[var(--color-primary)] to-[#996845] text-white rounded-br-xs"
-                        : "bg-white text-[var(--color-text)] border border-amber-900/10 rounded-bl-xs hover:border-amber-500/20"
-                    }`}
+                <div className="absolute -bottom-1 -right-1 bg-emerald-500 text-white rounded-full p-1 shadow-md">
+                  <Compass size={12} />
+                </div>
+              </div>
+              <h3 className="text-base font-bold text-gray-800 mb-1">Welcome to {venueName}!</h3>
+              <p className="text-xs text-gray-500 max-w-xs mb-6">
+                Connect with fellow patrons, share vibes, or order food together.
+              </p>
+              
+              {/* Quick Starter Pills */}
+              <div className="flex flex-wrap gap-2 justify-center max-w-sm">
+                {[
+                  "👋 Hey everyone!",
+                  "☕ What's good to drink here?",
+                  "🍕 Anyone want to recommend a dish?",
+                  "🎵 Love the music in here!"
+                ].map((starter, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => {
+                      setInput(starter);
+                    }}
+                    className="px-3 py-1.5 rounded-full text-xs font-medium bg-white hover:bg-amber-50 text-amber-900 border border-amber-900/10 hover:border-amber-500/30 transition-all duration-200 hover:scale-105 active:scale-95 shadow-xs cursor-pointer"
                   >
-                    {msg.body}
+                    {starter}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : (
+            messages.map((msg) => {
+              const isMe = msg.from === handle;
+
+              return (
+                <div 
+                  key={msg.id} 
+                  className={`animate-slide-up flex gap-2.5 transition-all duration-200 ${
+                    isMe ? "flex-row-reverse" : "flex-row"
+                  }`}
+                >
+                  {/* Photo & Status */}
+                  <div 
+                    className="relative shrink-0 cursor-pointer group self-end"
+                    onClick={() => msg.from && handleUserClick(msg.from)}
+                  >
+                    <img 
+                      src={msg.profilePhoto || `https://api.dicebear.com/7.x/fun-emoji/svg?seed=${encodeURIComponent(msg.username || msg.from || "guest")}`} 
+                      alt={msg.from || ""} 
+                      className="w-9 h-9 rounded-full border-2 border-white shadow-xs object-cover bg-amber-50 group-hover:scale-110 transition-transform" 
+                    />
+                    <span className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-white flex items-center justify-center text-[8px] border border-gray-100 shadow-xs">
+                      {msg.statusEmoji || "🟢"}
+                    </span>
+                  </div>
+
+                  {/* Message Content */}
+                  <div className={`flex flex-col space-y-1 max-w-[78%] ${isMe ? "items-end" : "items-start"}`}>
+                    <div className="flex items-baseline gap-1.5 px-1">
+                      <span 
+                        className="text-xs font-bold cursor-pointer hover:underline text-gray-800 flex items-center gap-1" 
+                        onClick={() => msg.from && handleUserClick(msg.from)}
+                      >
+                        <span>{isMe ? "You" : msg.from}</span>
+                        {msg.username && !isMe && (
+                          <span className="text-[10px] font-normal text-amber-800/60 font-mono">@{msg.username}</span>
+                        )}
+                      </span>
+                      <span className="text-[9px] text-gray-400">{msg.timestamp}</span>
+                    </div>
+
+                    <div 
+                      className={`px-4 py-2.5 rounded-2xl text-sm leading-relaxed shadow-xs transition-all ${
+                        isMe
+                          ? "bg-gradient-to-r from-[var(--color-primary)] to-[#996845] text-white rounded-br-xs"
+                          : "bg-white text-[var(--color-text)] border border-amber-900/10 rounded-bl-xs hover:border-amber-500/20"
+                      }`}
+                    >
+                      {msg.body}
+                    </div>
                   </div>
                 </div>
+              );
+            })
+          )}
+          <div ref={messagesEndRef} />
+        </div>
+
+        {/* ─── Inline Polls Panel ─── */}
+        {showPolls && (
+          <div
+            className="w-full sm:w-[340px] sm:max-w-[340px] sm:min-w-[280px] flex flex-col border-l animate-slide-in-right"
+            style={{
+              background: "var(--color-surface)",
+              borderColor: "var(--color-border)",
+            }}
+          >
+            {/* Polls Panel Header */}
+            <div
+              className="flex items-center justify-between px-3.5 py-2.5 shrink-0 border-b"
+              style={{ borderColor: "var(--color-border)" }}
+            >
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setShowPolls(false)}
+                  className="p-1 rounded-lg hover:bg-black/5 cursor-pointer transition-colors sm:hidden"
+                >
+                  <ChevronLeft size={16} style={{ color: "var(--color-muted)" }} />
+                </button>
+                <div className="flex items-center gap-1.5">
+                  <Vote size={16} style={{ color: "var(--color-primary)" }} />
+                  <span className="text-sm font-bold" style={{ color: "var(--color-primary)", fontFamily: "var(--font-heading)" }}>Polls</span>
+                  <span className="px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-amber-500/10 text-amber-800 border border-amber-500/20">Live</span>
+                </div>
               </div>
-            );
-          })
+              <div className="flex items-center gap-1.5">
+                <button
+                  onClick={() => setShowCreatePoll(true)}
+                  className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[10px] font-bold text-white transition-all hover:scale-105 active:scale-95 cursor-pointer"
+                  style={{ background: "var(--color-primary)" }}
+                >
+                  <Plus size={12} />
+                  New
+                </button>
+                <button
+                  onClick={() => setShowPolls(false)}
+                  className="p-1 rounded-lg hover:bg-black/5 cursor-pointer transition-colors hidden sm:block"
+                >
+                  <X size={14} style={{ color: "var(--color-muted)" }} />
+                </button>
+              </div>
+            </div>
+
+            {/* Polls Content */}
+            <div className="flex-1 overflow-y-auto p-3 space-y-3">
+              {isPollsLoading ? (
+                <div className="flex items-center justify-center py-12">
+                  <div className="w-6 h-6 border-2 border-amber-500/30 border-t-amber-600 rounded-full animate-spin" />
+                </div>
+              ) : polls.length === 0 ? (
+                <div className="text-center py-10 px-4 animate-fade-in">
+                  <div className="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-700 mx-auto mb-3">
+                    <Vote size={24} />
+                  </div>
+                  <h3 className="text-sm font-bold text-gray-800 mb-1">No Polls Yet</h3>
+                  <p className="text-[11px] text-gray-500 mb-4">Be the first to start one!</p>
+                  <button
+                    onClick={() => setShowCreatePoll(true)}
+                    className="px-4 py-2 rounded-xl text-[11px] font-bold text-white shadow-sm hover:scale-105 active:scale-95 transition-all cursor-pointer"
+                    style={{ background: "var(--color-primary)" }}
+                  >
+                    + Create Poll
+                  </button>
+                </div>
+              ) : (
+                polls.map((poll) => (
+                  <div
+                    key={poll.id}
+                    className="bg-white rounded-2xl p-3.5 border border-amber-900/10 shadow-xs hover:shadow-sm transition-all"
+                  >
+                    <div className="flex items-start justify-between gap-2 mb-2">
+                      <div className="min-w-0">
+                        <h3 className="text-[13px] font-bold text-gray-900 leading-snug">{poll.question}</h3>
+                        <p className="text-[10px] text-gray-400 mt-0.5">
+                          by <span className="font-semibold text-amber-900/70">@{poll.creator_handle}</span> · {poll.total_votes} {poll.total_votes === 1 ? "vote" : "votes"}
+                        </p>
+                      </div>
+                      {poll.voted_option_id && (
+                        <span className="shrink-0 flex items-center gap-0.5 text-[9px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                          <CheckCircle2 size={10} /> Voted
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="space-y-1.5 mt-2.5">
+                      {poll.options.map((option) => {
+                        const isVoted = poll.voted_option_id === option.id;
+                        return (
+                          <button
+                            key={option.id}
+                            onClick={() => handlePollVote(poll.id, option.id)}
+                            className={`w-full relative overflow-hidden p-2.5 rounded-xl text-left transition-all cursor-pointer border ${
+                              isVoted
+                                ? "border-amber-500 ring-2 ring-amber-500/20 shadow-xs"
+                                : "border-gray-200 hover:border-amber-400/50 bg-gray-50/50"
+                            }`}
+                          >
+                            <div
+                              className={`absolute top-0 left-0 bottom-0 transition-all duration-500 ease-out ${
+                                isVoted
+                                  ? "bg-gradient-to-r from-amber-500/20 to-orange-500/20"
+                                  : "bg-amber-100/50"
+                              }`}
+                              style={{ width: `${option.percentage}%` }}
+                            />
+                            <div className="relative z-10 flex items-center justify-between gap-2">
+                              <div className="flex items-center gap-1.5 min-w-0">
+                                <div
+                                  className={`w-3.5 h-3.5 rounded-full border flex items-center justify-center shrink-0 transition-colors ${
+                                    isVoted
+                                      ? "bg-amber-600 border-amber-600 text-white"
+                                      : "border-gray-300 bg-white"
+                                  }`}
+                                >
+                                  {isVoted && <Check size={8} strokeWidth={3} />}
+                                </div>
+                                <span className={`text-[11px] font-semibold truncate ${isVoted ? "text-amber-950 font-bold" : "text-gray-800"}`}>
+                                  {option.text}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-1 shrink-0">
+                                <span className="text-[11px] font-bold text-gray-700">{option.percentage}%</span>
+                                <span className="text-[9px] text-gray-400">({option.votes})</span>
+                              </div>
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+
+            {/* Create Poll Inline Form (bottom sheet style inside panel) */}
+            {showCreatePoll && (
+              <div className="border-t p-3.5 shrink-0 animate-slide-up" style={{ borderColor: "var(--color-border)", background: "white" }}>
+                <div className="flex items-center justify-between mb-2.5">
+                  <div className="flex items-center gap-1.5">
+                    <BarChart2 size={14} style={{ color: "var(--color-primary)" }} />
+                    <span className="text-xs font-bold text-gray-900">New Poll</span>
+                  </div>
+                  <button
+                    onClick={() => setShowCreatePoll(false)}
+                    className="p-1 rounded-full hover:bg-black/5 text-gray-400 cursor-pointer"
+                  >
+                    <X size={14} />
+                  </button>
+                </div>
+
+                {/* Quick Templates */}
+                <div className="flex gap-1.5 mb-2.5 overflow-x-auto pb-1" style={{ scrollbarWidth: "none" }}>
+                  {POLL_TEMPLATES.map((tmpl, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => { setPollQuestion(tmpl.question); setPollOptions(tmpl.options); }}
+                      className="text-[10px] px-2 py-1 rounded-lg bg-amber-50/70 hover:bg-amber-100/70 text-amber-900 border border-amber-900/10 transition-all whitespace-nowrap cursor-pointer shrink-0"
+                    >
+                      {tmpl.question.split(" ").slice(0, 3).join(" ")}…
+                    </button>
+                  ))}
+                </div>
+
+                <form onSubmit={handleCreatePoll} className="space-y-2">
+                  <input
+                    type="text"
+                    value={pollQuestion}
+                    onChange={(e) => setPollQuestion(e.target.value)}
+                    placeholder="Ask a question..."
+                    required
+                    className="w-full px-3 py-2 rounded-xl border border-gray-200 text-xs outline-none focus:ring-2 focus:ring-amber-500/30"
+                  />
+                  {pollOptions.map((opt, idx) => (
+                    <div key={idx} className="flex gap-1.5">
+                      <input
+                        type="text"
+                        value={opt}
+                        onChange={(e) => {
+                          const newOpts = [...pollOptions];
+                          newOpts[idx] = e.target.value;
+                          setPollOptions(newOpts);
+                        }}
+                        placeholder={`Option ${idx + 1}`}
+                        required
+                        className="flex-1 px-3 py-1.5 rounded-xl border border-gray-200 text-xs outline-none focus:ring-2 focus:ring-amber-500/30"
+                      />
+                      {pollOptions.length > 2 && (
+                        <button
+                          type="button"
+                          onClick={() => setPollOptions(pollOptions.filter((_, i) => i !== idx))}
+                          className="p-1 text-red-400 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
+                        >
+                          <X size={12} />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                  {pollOptions.length < 5 && (
+                    <button
+                      type="button"
+                      onClick={() => setPollOptions([...pollOptions, ""])}
+                      className="text-[10px] text-amber-700 font-bold hover:underline flex items-center gap-0.5 cursor-pointer"
+                    >
+                      <Plus size={10} /> Add Option
+                    </button>
+                  )}
+                  <div className="flex gap-1.5 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => setShowCreatePoll(false)}
+                      className="flex-1 py-2 rounded-xl border border-gray-200 text-[11px] font-bold text-gray-600 hover:bg-gray-50 transition-colors cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={isPollSubmitting}
+                      className="flex-1 py-2 rounded-xl text-[11px] font-bold text-white shadow-sm transition-all hover:scale-105 active:scale-95 cursor-pointer disabled:opacity-50"
+                      style={{ background: "var(--color-primary)" }}
+                    >
+                      {isPollSubmitting ? "Creating..." : "Publish"}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            )}
+          </div>
         )}
-        <div ref={messagesEndRef} />
       </div>
 
       {/* Quick Emoji Toolbar & Input */}
