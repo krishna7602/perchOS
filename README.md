@@ -7,7 +7,7 @@
 ## 🌟 Features
 
 ### For Customers (The Perch Experience)
-- **Instant Access via QR**: Simply scan the QR code on your table to join the venue's digital space.
+- **Instant Access via QR**:Simply scan the QR code on your table to join the venue's digital space.
 - **Real-Time Venue Chat**: Join a live chat room specific to the venue. Connect with other patrons, request songs, or chat with the staff.
 - **Digital Menu & Cart**: Browse the dynamic menu, add items to your cart, and place orders directly from your phone.
 - **Seamless Payments**: Support for multiple payment gateways including Razorpay and Cash on Delivery (COD).
