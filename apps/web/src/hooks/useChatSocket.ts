@@ -16,13 +16,17 @@ interface UseChatSocketOptions {
   venueId: string;
   chatToken: string;
   onMessage: (msg: ChatMessage) => void;
+  onSessionExpired?: () => void;
 }
 
-export function useChatSocket({ venueId, chatToken, onMessage }: UseChatSocketOptions) {
+export function useChatSocket({ venueId, chatToken, onMessage, onSessionExpired }: UseChatSocketOptions) {
   const wsRef = useRef<WebSocket | null>(null);
   const [isConnected, setIsConnected] = useState(false);
+  const [sessionExpired, setSessionExpired] = useState(false);
   const onMessageRef = useRef(onMessage);
   onMessageRef.current = onMessage;
+  const onSessionExpiredRef = useRef(onSessionExpired);
+  onSessionExpiredRef.current = onSessionExpired;
 
   useEffect(() => {
     if (!venueId || !chatToken) return;
@@ -42,8 +46,13 @@ export function useChatSocket({ venueId, chatToken, onMessage }: UseChatSocketOp
       } catch {}
     };
 
-    ws.onclose = () => {
+    ws.onclose = (event) => {
       setIsConnected(false);
+      // 4008 = session expired (2-hour limit reached)
+      if (event.code === 4008) {
+        setSessionExpired(true);
+        onSessionExpiredRef.current?.();
+      }
     };
 
     ws.onerror = () => {
@@ -80,6 +89,7 @@ export function useChatSocket({ venueId, chatToken, onMessage }: UseChatSocketOp
 
   return {
     isConnected,
+    sessionExpired,
     sendMessage,
     sendDmRequest,
     sendDmAccept,

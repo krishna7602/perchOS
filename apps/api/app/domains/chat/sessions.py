@@ -56,7 +56,7 @@ async def join_room(payload: JoinRequest):
 
     await profile.save()
 
-    # Create a short-lived JWT scoped to this room (3 hours)
+    # Create a short-lived JWT scoped to this room (2 hours)
     token = create_access_token(
         profile.name,
         {
@@ -65,7 +65,7 @@ async def join_room(payload: JoinRequest):
             "restaurant_id": str(branch.restaurant_id),
             "profile_id": str(profile.id)
         },
-        expires_minutes=180,
+        expires_minutes=120,
     )
 
     return JoinResponse(

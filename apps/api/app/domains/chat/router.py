@@ -165,6 +165,11 @@ async def room_ws(
         - {"type": "dm_message", "from": "handle", "body": "..."}
         - {"type": "system", "body": "..."}
     """
+    import asyncio
+
+    # Maximum session duration for customers: 2 hours (in seconds)
+    MAX_SESSION_SECONDS = 2 * 60 * 60
+
     # Verify the chat token
     try:
         claims = decode_token(token)
@@ -175,11 +180,14 @@ async def room_ws(
     handle = claims["sub"]
     token_venue_id = claims.get("venue_id") or claims.get("branch_id")
     role = claims.get("role")
+    profile_id = claims.get("profile_id")
 
     # Ensure the token is scoped to this venue (or user is management)
     if role not in ["owner", "manager", "super_admin"] and token_venue_id != venue_id:
         await websocket.close(code=4003)
         return
+
+    is_guest = role == "guest"
 
     # Connect to the room
     await chat_manager.connect(venue_id, handle, websocket)
@@ -190,7 +198,10 @@ async def room_ws(
         {"type": "system", "body": f"{handle} joined the room"},
     )
 
-    try:
+    session_start = datetime.utcnow()
+
+    async def _handle_messages():
+        """Inner loop that processes incoming WebSocket messages."""
         while True:
             data = await websocket.receive_json()
             msg_type = data.get("type")
@@ -259,11 +270,62 @@ async def room_ws(
                     {"type": "dm_message", "from": handle, "body": body},
                 )
 
+    timed_out = False
+    try:
+        if is_guest:
+            # Enforce 2-hour max session for customers
+            await asyncio.wait_for(_handle_messages(), timeout=MAX_SESSION_SECONDS)
+        else:
+            # Staff/admin connections have no time limit
+            await _handle_messages()
+    except asyncio.TimeoutError:
+        timed_out = True
+        # Session expired — notify the customer and close gracefully
+        try:
+            await websocket.send_json({
+                "type": "system",
+                "body": "Your 2-hour session has ended. Thanks for perching with us! 🐦"
+            })
+            await websocket.close(code=4008)
+        except Exception:
+            pass
     except WebSocketDisconnect:
+        pass
+    finally:
+        # Remove from live connections (WebSocket in-memory)
         is_completely_disconnected = chat_manager.disconnect(venue_id, handle, websocket)
+
         if is_completely_disconnected:
+            # Broadcast departure
             await chat_manager.broadcast(
                 venue_id,
                 {"type": "system", "body": f"{handle} left the room"},
             )
             await chat_manager.broadcast_presence(venue_id)
+
+            # Clear live presence from DB but keep all profile data persisted
+            if is_guest and profile_id:
+                try:
+                    profile = await CustomerProfile.get(PydanticObjectId(profile_id))
+                    if profile:
+                        profile.current_venue_id = None
+                        profile.last_active = datetime.utcnow()
+                        await profile.save()
+                except Exception:
+                    pass
+
+                # Mark VenueSession as inactive
+                try:
+                    from app.domains.networking.models import VenueSession
+                    session = await VenueSession.find_one(
+                        VenueSession.user_id == PydanticObjectId(profile_id),
+                        VenueSession.venue_id == PydanticObjectId(venue_id),
+                        VenueSession.is_active == True,
+                    )
+                    if session:
+                        session.is_active = False
+                        session.last_active = datetime.utcnow()
+                        await session.save()
+                except Exception:
+                    pass
+
