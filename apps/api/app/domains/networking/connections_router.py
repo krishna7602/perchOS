@@ -81,6 +81,17 @@ async def accept_wave(
         
     if wave.receiver_id != customer.id:
         raise HTTPException(status_code=403, detail="not_authorized")
+
+    # Idempotency check: if already accepted, return existing connection
+    if wave.status == WaveStatus.ACCEPTED:
+        existing_conn = await Connection.find_one({
+            "$or": [
+                {"user_a": wave.sender_id, "user_b": wave.receiver_id},
+                {"user_a": wave.receiver_id, "user_b": wave.sender_id}
+            ]
+        })
+        conn_id = str(existing_conn.id) if existing_conn else None
+        return {"status": "accepted", "connection_id": conn_id}
         
     if wave.status != WaveStatus.PENDING:
         raise HTTPException(status_code=400, detail="wave_not_pending")
@@ -96,7 +107,19 @@ async def accept_wave(
     )
     await connection.insert()
     
+    # Realtime push notification to BOTH sides
+    sender = await CustomerProfile.get(wave.sender_id)
+    sender_handle = sender.display_name if sender else ""
+    receiver_handle = customer.display_name
+
+    from app.domains.chat.manager import chat_manager
+    if sender_handle:
+        await chat_manager.push_event(sender_handle, "wave_accepted", {"request_id": str(wave_id), "by": receiver_handle})
+    if receiver_handle:
+        await chat_manager.push_event(receiver_handle, "wave_accepted", {"request_id": str(wave_id), "by": receiver_handle})
+
     return {"status": "accepted", "connection_id": str(connection.id)}
+
 
 
 @router.post("/wave/{wave_id}/ignore")

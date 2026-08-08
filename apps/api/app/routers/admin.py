@@ -134,3 +134,24 @@ async def update_payment_settings(payload: PaymentSettingsUpdate, user: User = D
         
     await restaurant.save()
     return {"status": "success"}
+
+
+@router.patch("/orders/{order_id}/cash-collected")
+async def mark_cash_collected(order_id: str, user: User = Depends(require_staff)):
+    """Mark a Cash on Delivery order payment as collected by staff."""
+    from beanie import PydanticObjectId
+    from fastapi import HTTPException
+
+    try:
+        obj_id = PydanticObjectId(order_id)
+    except Exception:
+        raise HTTPException(status_code=400, detail="invalid_order_id")
+
+    order = await Order.get(obj_id)
+    if not order or order.payment_method != "cod":
+        raise HTTPException(status_code=400, detail="not_a_cod_order")
+
+    order.payment_status = "paid"
+    await order.save()
+    return order
+

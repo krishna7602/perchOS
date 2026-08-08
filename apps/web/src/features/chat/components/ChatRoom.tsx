@@ -106,12 +106,19 @@ export function ChatRoom({
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Poll Messages every 3 seconds
+  // Poll Messages every 3 seconds & cap client state at 3-hour retention window
   useEffect(() => {
     const fetchMessages = async () => {
       try {
         const data = await getVenueMessages(venueId, chatToken);
-        const mapped: DisplayMessage[] = data.messages.map((m: any) => ({
+        const THREE_HOURS_MS = 3 * 60 * 60 * 1000;
+        const cutoff = Date.now() - THREE_HOURS_MS;
+
+        const freshData = (data.messages || []).filter(
+          (m: any) => new Date(m.created_at).getTime() >= cutoff
+        );
+
+        const mapped: DisplayMessage[] = freshData.map((m: any) => ({
           id: m.id,
           type: "message",
           from: m.display_name,
@@ -133,6 +140,13 @@ export function ChatRoom({
     return () => clearInterval(interval);
   }, [venueId, chatToken]);
 
+
+  const [socketInstance, setSocketInstance] = useState<WebSocket | null>(null);
+
+  // Bind out-of-band realtime events (wave_accepted, new_message) to global stores
+  const { useRealtimeEvents } = require("@/hooks/useRealtimeEvents");
+  useRealtimeEvents(socketInstance);
+
   // Connect real-time WebSocket for live presence & instant message sync
   useEffect(() => {
     if (!venueId || !chatToken) return;
@@ -146,6 +160,7 @@ export function ChatRoom({
     let ws: WebSocket | null = null;
     try {
       ws = new WebSocket(wsUrl);
+      setSocketInstance(ws);
 
       ws.onmessage = (event) => {
         try {
@@ -158,6 +173,14 @@ export function ChatRoom({
             setIncomingWave({
               waveId: data.wave_id,
               senderId: data.sender_id,
+              senderName: data.sender_name,
+              senderPhoto: data.sender_photo,
+            });
+            // Push to global notification store for unified toast rendering
+            const { useNotificationsStore } = require("@/stores/notificationsStore");
+            useNotificationsStore.getState().push({
+              kind: "wave_request",
+              requestId: data.wave_id,
               senderName: data.sender_name,
               senderPhoto: data.sender_photo,
             });
@@ -175,8 +198,10 @@ export function ChatRoom({
       if (ws && ws.readyState === WebSocket.OPEN) {
         ws.close();
       }
+      setSocketInstance(null);
     };
   }, [venueId, chatToken]);
+
 
   // Poll Discovery profiles for profile lookups only (NOT for live presence)
   useEffect(() => {
@@ -227,19 +252,13 @@ export function ChatRoom({
   const handleAcceptIncomingWave = async () => {
     if (!incomingWave) return;
     try {
-      const res = await acceptWave(incomingWave.waveId, chatToken);
-      if (res.status === "accepted" && res.connection_id) {
-        setDmThread({
-          connectionId: res.connection_id,
-          handle: incomingWave.senderName,
-          messages: [],
-          isAccepted: true,
-        });
+      const { useConnectionsStore } = require("@/stores/connectionsStore");
+      const ok = await useConnectionsStore.getState().acceptWave(incomingWave.waveId, chatToken);
+      if (ok) {
+        setIncomingWave(null);
       }
     } catch (err) {
       console.error("Error accepting wave", err);
-    } finally {
-      setIncomingWave(null);
     }
   };
 

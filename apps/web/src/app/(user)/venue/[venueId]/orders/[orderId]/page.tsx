@@ -102,15 +102,26 @@ export default function OrderPage() {
   };
 
   return (
-    <div className="min-h-screen px-4 py-8 pb-[110px] print:bg-white print:pb-0" style={{ background: "var(--color-bg)" }}>
-      <div className="max-w-lg mx-auto animate-fade-in">
-        <Link 
-          href={`/venue/${venueId}/orders`}
-          className="inline-flex items-center text-sm mb-6 hover:underline" 
-          style={{ color: "var(--color-muted)" }}
-        >
-          <ArrowLeft size={16} className="mr-1" /> Back to My Orders
-        </Link>
+    <div
+      className="h-[100dvh] flex flex-col overflow-hidden print:bg-white print:h-auto print:overflow-visible"
+      style={{ background: "var(--color-bg)" }}
+    >
+      <div
+        className="flex-1 overflow-y-auto px-4 py-6 animate-fade-in print:overflow-visible"
+        style={{
+          WebkitOverflowScrolling: "touch",
+          paddingBottom: "calc(var(--bottom-nav-height, 80px) + 1.5rem)",
+        }}
+      >
+        <div className="max-w-lg mx-auto">
+          <Link
+            href={`/venue/${venueId}/orders`}
+            className="inline-flex items-center text-sm mb-6 hover:underline"
+            style={{ color: "var(--color-muted)" }}
+          >
+            <ArrowLeft size={16} className="mr-1" /> Back to My Orders
+          </Link>
+
         {/* Header */}
         <div className="text-center mb-8">
           <p className="text-5xl mb-3">
@@ -335,5 +346,9 @@ export default function OrderPage() {
         </div>
       </div>
     </div>
-  );
+  </div>
+);
 }
+
+
+

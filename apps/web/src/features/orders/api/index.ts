@@ -72,3 +72,15 @@ export function assignWaiter(orderId: string, token: string) {
     token,
   });
 }
+
+export function getPaymentMethods() {
+  return apiFetch<{ id: string; label: string; description: string }[]>("/config/payment-methods");
+}
+
+export function markCashCollected(orderId: string, token: string) {
+  return apiFetch<Record<string, unknown>>(`/admin/orders/${orderId}/cash-collected`, {
+    method: "PATCH",
+    token,
+  });
+}
+

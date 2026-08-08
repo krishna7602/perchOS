@@ -94,6 +94,24 @@ class ChatManager:
                     
         return success
 
+    async def push_event(self, handle: str, event_type: str, payload: dict):
+        """Generic out-of-band push to a specific user's socket, used for
+        anything that isn't room-broadcast chat: wave status, new-message
+        pings, order status changes. Silently no-ops if the user has no
+        open socket right now (they'll see it on next poll/load instead)."""
+        for room in list(self.rooms.values()):
+            wss = room.get(handle, [])
+            if wss:
+                disconnected = []
+                for ws in list(wss):
+                    try:
+                        await ws.send_json({"type": event_type, "payload": payload})
+                    except Exception:
+                        disconnected.append(ws)
+                for ws in disconnected:
+                    if ws in wss:
+                        wss.remove(ws)
+
     def get_online_count(self, venue_id: str) -> int:
         """Get the number of online users in a venue room."""
         return len(self.rooms.get(venue_id, {}))
@@ -105,3 +123,4 @@ class ChatManager:
 
 # Singleton instance
 chat_manager = ChatManager()
+

@@ -87,7 +87,23 @@ async def send_direct_message(
         content=payload.content.strip()
     )
     await msg.insert()
-    
+
+    # Trigger realtime push_event to recipient
+    recipient_id = connection.user_b if connection.user_a == customer.id else connection.user_a
+    recipient = await CustomerProfile.get(recipient_id)
+    if recipient and recipient.display_name:
+        from app.domains.chat.manager import chat_manager
+        await chat_manager.push_event(
+            recipient.display_name,
+            "new_message",
+            {
+                "conversation_id": str(connection_id),
+                "sender_id": str(customer.id),
+                "sender_name": customer.display_name,
+                "content": payload.content.strip()
+            }
+        )
+
     return {
         "id": str(msg.id),
         "connection_id": str(msg.connection_id),
@@ -96,3 +112,4 @@ async def send_direct_message(
         "is_read": msg.is_read,
         "created_at": msg.created_at.isoformat()
     }
+

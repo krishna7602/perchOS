@@ -4,9 +4,7 @@ from beanie import PydanticObjectId
 from app.domains.orders.models import Order, OrderLine, Payment
 from app.domains.venues.branch_model import Branch
 from app.domains.auth.models import User, Role, StaffStatus
-from app.services.payments.dummy_gateway import DummyGateway
-from app.services.payments.cod_gateway import CODGateway
-from app.services.payments.razorpay_gateway import RazorpayGateway
+from app.services.payments.registry import get_available_gateways, get_payment_methods_info
 from app.domains.orders.schemas import CreateOrderRequest, OrderStatusUpdate, VerifyPaymentRequest
 from app.deps import get_current_user, RequireRole
 import re
@@ -14,27 +12,12 @@ import re
 router = APIRouter(tags=["orders"])
 require_kitchen = RequireRole([Role.OWNER, Role.MANAGER, Role.CHEF])
 
-async def get_next_sequence(branch_id: str, sequence_name: str) -> int:
-    from app.domains.orders.models import Counter
-    counter = await Counter.find_one({"branch_id": branch_id, "sequence_name": sequence_name})
-    if not counter:
-        counter = Counter(branch_id=branch_id, sequence_name=sequence_name, sequence_value=1)
-        await counter.insert()
-        return 1
-    counter.sequence_value += 1
-    await counter.save()
-    return counter.sequence_value
 
-def generate_acronym(text: str) -> str:
-    # Extracts the first letter of each word and upper cases it
-    words = re.findall(r'\b\w', text)
-    return "".join(words).upper()[:4] # limit to 4 chars max
+@router.get("/config/payment-methods")
+async def get_payment_methods():
+    """Get available payment methods based on environment configuration."""
+    return get_payment_methods_info()
 
-GATEWAYS = {
-    "dummy_card": DummyGateway(),
-    "cod": CODGateway(),
-    "razorpay": RazorpayGateway(),
-}
 
 VALID_STATUSES = {"received", "preparing", "ready", "served"}
 
@@ -74,12 +57,32 @@ async def dispatch_paid_order(order: Order):
     asyncio.create_task(chat_manager.broadcast(str(order.branch_id), {"type": "system_order", "payload": push_payload}))
 
 
+async def get_next_sequence(branch_id: str, sequence_name: str) -> int:
+    from app.domains.orders.models import Counter
+    counter = await Counter.find_one({"branch_id": branch_id, "sequence_name": sequence_name})
+    if not counter:
+        counter = Counter(branch_id=branch_id, sequence_name=sequence_name, sequence_value=1)
+        await counter.insert()
+        return 1
+    counter.sequence_value += 1
+    await counter.save()
+    return counter.sequence_value
+
+
+def generate_acronym(text: str) -> str:
+    # Extracts the first letter of each word and upper cases it
+    words = re.findall(r'\b\w', text)
+    return "".join(words).upper()[:4]  # limit to 4 chars max
+
+
 @router.post("/orders")
 async def create_order(payload: CreateOrderRequest):
     """Create a new order and process payment."""
-    gateway = GATEWAYS.get(payload.payment_method)
+    gateways = get_available_gateways()
+    gateway = gateways.get(payload.payment_method)
     if not gateway:
         raise HTTPException(status_code=400, detail="unsupported_payment_method")
+
 
     branch = await Branch.get(PydanticObjectId(payload.venue_id))
     if not branch:

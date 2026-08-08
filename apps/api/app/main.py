@@ -31,15 +31,13 @@ async def lifespan(app: FastAPI):
     await init_db()
     await init_redis()
 
-    # Auto-seed dev admin in development
-    if settings.ENVIRONMENT == "development":
-        from app.seed import seed_admin
-        try:
-            await seed_admin()
-        except Exception as e:
-            print(f"Seed warning: {e}")
+    # Start background chat retention pruning task
+    import asyncio
+    from app.jobs.chat_pruning import prune_all_rooms_loop
+    asyncio.create_task(prune_all_rooms_loop())
 
     yield
+
 
     # Shutdown
     await close_redis()

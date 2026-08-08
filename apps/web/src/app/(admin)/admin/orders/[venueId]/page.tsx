@@ -44,6 +44,18 @@ export default function OrdersKanbanPage() {
     return () => clearInterval(interval);
   }, [fetchOrders]);
 
+  const handleMarkCashCollected = async (orderId: string) => {
+    try {
+      const { markCashCollected } = await import("@/features/orders/api");
+      await markCashCollected(orderId, token);
+      setOrders((prev) =>
+        prev.map((o) => (o._id === orderId ? { ...o, payment_status: "paid" } : o))
+      );
+    } catch (err) {
+      alert("Failed to mark cash as collected.");
+    }
+  };
+
   const handleAdvanceStatus = async (orderId: string, currentStatus: string) => {
     const currentIdx = ORDER_STATUSES.indexOf(currentStatus as typeof ORDER_STATUSES[number]);
     if (currentIdx >= ORDER_STATUSES.length - 1) return;
@@ -55,7 +67,6 @@ export default function OrdersKanbanPage() {
     } catch {}
   };
 
-  // Group orders by status
   const ordersByStatus = ORDER_STATUSES.reduce(
     (acc, status) => {
       acc[status] = orders.filter((o) => o.order_status === status);
@@ -65,53 +76,67 @@ export default function OrdersKanbanPage() {
   );
 
   return (
-    <div className="p-6 lg:p-8">
-      <div className="flex items-center justify-between mb-8">
+    <div className="min-h-screen p-6" style={{ background: "var(--color-bg)" }}>
+      {/* Top bar */}
+      <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
-          <button onClick={() => router.push("/admin/venues")} className="p-1.5 rounded-lg hover:bg-black/5 cursor-pointer">
-            <ArrowLeft size={18} style={{ color: "var(--color-muted)" }} />
+          <button
+            onClick={() => router.push(`/admin/branch/${venueId}`)}
+            className="p-2 rounded-lg hover:bg-black/5 cursor-pointer"
+          >
+            <ArrowLeft size={20} style={{ color: "var(--color-muted)" }} />
           </button>
-          <h1 className="text-2xl font-bold" style={{ fontFamily: "var(--font-heading)", color: "var(--color-text)" }}>
-            Orders
-          </h1>
+          <div>
+            <h1
+              className="text-2xl font-bold"
+              style={{ fontFamily: "var(--font-heading)", color: "var(--color-primary)" }}
+            >
+              Order Operations
+            </h1>
+            <p className="text-xs" style={{ color: "var(--color-muted)" }}>
+              Live Kanban Board • Venue #{venueId.slice(-6)}
+            </p>
+          </div>
         </div>
-        <Button variant="secondary" onClick={fetchOrders}>
-          <RefreshCw size={14} />
-          Refresh
+        <Button variant="secondary" className="px-3 py-1 text-xs" onClick={fetchOrders}>
+          <RefreshCw size={14} className="mr-1" /> Refresh
         </Button>
       </div>
 
       {isLoading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {[1, 2, 3, 4].map((i) => <Skeleton key={i} className="h-64" />)}
+        <div className="grid grid-cols-4 gap-4">
+          {[1, 2, 3, 4].map((n) => (
+            <Skeleton key={n} className="h-64 rounded-2xl" />
+          ))}
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           {ORDER_STATUSES.map((status) => (
             <div key={status} className="flex flex-col">
               {/* Column header */}
               <div
-                className="flex items-center gap-2 px-3 py-2.5 rounded-t-xl"
+                className="flex items-center justify-between p-3 rounded-t-2xl font-semibold text-sm"
                 style={{
                   background: "var(--color-surface)",
-                  borderBottom: "2px solid var(--color-primary)",
+                  border: "1px solid var(--color-border)",
+                  borderBottom: "none",
                 }}
               >
-                <span>{ORDER_STATUS_EMOJI[status]}</span>
-                <span className="text-sm font-semibold" style={{ color: "var(--color-text)" }}>
-                  {ORDER_STATUS_LABELS[status]}
+                <span className="flex items-center gap-2">
+                  <span>{ORDER_STATUS_EMOJI[status]}</span>
+                  <span style={{ color: "var(--color-text)" }}>{ORDER_STATUS_LABELS[status]}</span>
                 </span>
                 <span
-                  className="ml-auto text-xs px-2 py-0.5 rounded-full"
-                  style={{ background: "var(--color-bg)", color: "var(--color-muted)" }}
+                  className="text-xs px-2 py-0.5 rounded-full font-mono font-bold"
+                  style={{ background: "rgba(139, 94, 60, 0.1)", color: "var(--color-primary)" }}
                 >
                   {ordersByStatus[status].length}
                 </span>
               </div>
 
-              {/* Cards */}
+              {/* Column body */}
               <div
-                className="flex-1 space-y-2 p-2 rounded-b-xl min-h-[200px]"
+                className="flex-1 p-2 space-y-2 rounded-b-2xl min-h-[400px]"
                 style={{ background: "rgba(169, 153, 138, 0.05)" }}
               >
                 {ordersByStatus[status].length === 0 ? (
@@ -134,11 +159,13 @@ export default function OrdersKanbanPage() {
                           {order.order_token || `#${order._id.slice(-6).toUpperCase()}`}
                         </span>
                         <span
-                          className={`text-xs px-2 py-0.5 rounded-full ${
-                            order.payment_status === "paid" ? "status-ready" : "status-preparing"
+                          className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                            order.payment_status === "paid"
+                              ? "status-ready"
+                              : "bg-amber-100 text-amber-800 border border-amber-300"
                           }`}
                         >
-                          {order.payment_status === "paid" ? "Paid" : "COD"}
+                          {order.payment_status === "paid" ? "Paid" : "Cash Pending"}
                         </span>
                       </div>
                       <p className="text-xs font-medium mb-1" style={{ color: "var(--color-primary)" }}>
@@ -151,6 +178,16 @@ export default function OrdersKanbanPage() {
                           </p>
                         ))}
                       </div>
+
+                      {order.payment_method === "cod" && order.payment_status !== "paid" && (
+                        <button
+                          onClick={() => handleMarkCashCollected(order._id)}
+                          className="w-full mb-2 text-xs py-1 px-2 rounded bg-amber-600 hover:bg-amber-700 text-white font-semibold cursor-pointer transition-colors"
+                        >
+                          💵 Cash collected
+                        </button>
+                      )}
+
                       <div className="flex items-center justify-between">
                         <span className="text-sm font-bold" style={{ color: "var(--color-primary)" }}>
                           ₹{order.total.toFixed(2)}
