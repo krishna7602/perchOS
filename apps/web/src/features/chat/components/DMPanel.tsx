@@ -41,7 +41,7 @@ export function DMPanel({
   }, [messages]);
 
   const handleSend = () => {
-    if (!input.trim() || !isAccepted) return;
+    if (!input.trim()) return;
     onSend(input.trim());
     setInput("");
   };
@@ -131,35 +131,33 @@ export function DMPanel({
           <div ref={messagesEndRef} />
         </div>
 
-        {/* Input */}
-        {isAccepted && (
-          <div
-            className="flex items-center gap-2 px-4 py-3 shrink-0"
-            style={{ borderTop: "1px solid var(--color-border)" }}
+        {/* Always render input bar when DM panel is open */}
+        <div
+          className="flex items-center gap-2 px-4 py-3 shrink-0"
+          style={{ borderTop: "1px solid var(--color-border)" }}
+        >
+          <input
+            type="text"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && handleSend()}
+            placeholder={`Message @${handle}...`}
+            className="flex-1 px-4 py-2.5 rounded-full text-sm outline-none transition-all focus:ring-2 focus:ring-amber-500/30"
+            style={{
+              background: "var(--color-bg)",
+              border: "1.5px solid var(--color-border)",
+              color: "var(--color-text)",
+            }}
+          />
+          <button
+            onClick={handleSend}
+            disabled={!input.trim()}
+            className="p-2.5 rounded-full transition-all duration-200 cursor-pointer disabled:opacity-40 hover:scale-105 active:scale-95 shadow-sm"
+            style={{ background: "var(--color-primary)", color: "var(--color-surface)" }}
           >
-            <input
-              type="text"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleSend()}
-              placeholder="Type a private message..."
-              className="flex-1 px-4 py-2.5 rounded-full text-sm outline-none transition-all focus:ring-2 focus:ring-amber-500/30"
-              style={{
-                background: "var(--color-bg)",
-                border: "1.5px solid var(--color-border)",
-                color: "var(--color-text)",
-              }}
-            />
-            <button
-              onClick={handleSend}
-              disabled={!input.trim()}
-              className="p-2.5 rounded-full transition-all duration-200 cursor-pointer disabled:opacity-40 hover:scale-105 active:scale-95 shadow-sm"
-              style={{ background: "var(--color-primary)", color: "var(--color-surface)" }}
-            >
-              <Send size={16} />
-            </button>
-          </div>
-        )}
+            <Send size={16} />
+          </button>
+        </div>
       </div>
     </div>
   );
