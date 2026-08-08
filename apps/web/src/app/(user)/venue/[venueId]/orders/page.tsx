@@ -46,9 +46,14 @@ export default function MyOrdersPage() {
 
     fetchOrders();
 
-    // Poll every 10 seconds to update statuses
-    const intervalId = setInterval(fetchOrders, 10000);
-    return () => clearInterval(intervalId);
+    // Fast 2s polling + window event listener for immediate auto-refresh
+    const intervalId = setInterval(fetchOrders, 2000);
+    window.addEventListener("order_status_updated", fetchOrders);
+
+    return () => {
+      clearInterval(intervalId);
+      window.removeEventListener("order_status_updated", fetchOrders);
+    };
   }, [venueId]);
 
   if (isLoading) {

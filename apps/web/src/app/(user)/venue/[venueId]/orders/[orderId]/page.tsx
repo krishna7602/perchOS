@@ -6,7 +6,7 @@ import Link from "next/link";
 import { getOrder, selfPickupOrder } from "@/lib/api";
 import { ORDER_STATUSES, ORDER_STATUS_LABELS, ORDER_STATUS_EMOJI } from "@/lib/theme";
 import { Loader } from "@/components/ui/Loader";
-import { CheckCircle, ArrowLeft, Printer } from "lucide-react";
+import { CheckCircle, ArrowLeft, Printer, Receipt, ShieldCheck } from "lucide-react";
 import { playNotificationSound } from "@/lib/audio";
 
 export default function OrderPage() {
@@ -62,15 +62,21 @@ export default function OrderPage() {
       Notification.requestPermission();
     }
     fetchOrder();
-    // Poll every 5 seconds for status updates
-    const interval = setInterval(fetchOrder, 5000);
-    return () => clearInterval(interval);
+    
+    // Fast 2s polling + window event listener for immediate auto-refresh
+    const interval = setInterval(fetchOrder, 2000);
+    window.addEventListener("order_status_updated", fetchOrder);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener("order_status_updated", fetchOrder);
+    };
   }, [orderId]);
 
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <Loader label="Loading order..." />
+        <Loader label="Loading order details..." />
       </div>
     );
   }
@@ -88,267 +94,295 @@ export default function OrderPage() {
 
   const currentStatus = order.order_status as string;
   const currentIndex = ORDER_STATUSES.indexOf(currentStatus as typeof ORDER_STATUSES[number]);
-  const items = order.items as Array<{ name: string; price: number; quantity: number; variant_name?: string }>;
+  const items = (order.items || []) as Array<{ name: string; price: number; quantity: number; variant_name?: string }>;
+  const totalAmount = Number(order.total || 0);
+
+  // Calculate 5% GST tax breakdown
+  const subtotal = totalAmount / 1.05;
+  const totalTax = totalAmount - subtotal;
+  const cgst = totalTax / 2;
+  const sgst = totalTax / 2;
 
   const handlePrint = () => {
-    // Hide standard elements that shouldn't be on the invoice
-    const nav = document.querySelector('nav');
-    if (nav) nav.style.display = 'none';
-    
     window.print();
-    
-    // Restore
-    if (nav) nav.style.display = 'flex';
   };
 
   return (
     <div
-      className="h-[100dvh] flex flex-col overflow-hidden print:bg-white print:h-auto print:overflow-visible"
+      className="min-h-[100dvh] flex flex-col print:bg-white print:min-h-0 print:h-auto"
       style={{ background: "var(--color-bg)" }}
     >
+      <style>{`
+        @media print {
+          body {
+            background: white !important;
+            color: black !important;
+          }
+          nav, header, footer, .print-hidden {
+            display: none !important;
+          }
+          .print-only {
+            display: block !important;
+          }
+          .invoice-card {
+            border: 1px solid #e5e7eb !important;
+            box-shadow: none !important;
+            padding: 1.5rem !important;
+            max-width: 100% !important;
+          }
+        }
+      `}</style>
+
       <div
-        className="flex-1 overflow-y-auto px-4 py-6 animate-fade-in print:overflow-visible"
+        className="flex-1 overflow-y-auto px-4 py-6 print:p-0 print:overflow-visible"
         style={{
           WebkitOverflowScrolling: "touch",
           paddingBottom: "calc(var(--bottom-nav-height, 80px) + 1.5rem)",
         }}
       >
-        <div className="max-w-lg mx-auto">
+        <div className="max-w-lg mx-auto print:max-w-full">
+          {/* Back link - hidden in print */}
           <Link
             href={`/venue/${venueId}/orders`}
-            className="inline-flex items-center text-sm mb-6 hover:underline"
+            className="inline-flex items-center text-sm mb-6 hover:underline print:hidden"
             style={{ color: "var(--color-muted)" }}
           >
             <ArrowLeft size={16} className="mr-1" /> Back to My Orders
           </Link>
 
-        {/* Header */}
-        <div className="text-center mb-8">
-          <p className="text-5xl mb-3">
-            {currentStatus === "served" ? "🎉" : ORDER_STATUS_EMOJI[currentStatus as keyof typeof ORDER_STATUS_EMOJI] || "📋"}
-          </p>
-          <h1
-            className="text-2xl font-bold mb-1"
-            style={{ fontFamily: "var(--font-heading)", color: "var(--color-primary)" }}
-          >
-            {currentStatus === "served" ? "Invoice / Receipt" : "Order Tracker"}
-          </h1>
-          <p className="text-sm font-semibold" style={{ color: "var(--color-text)" }}>
-            Order {order.order_token as string || `#${((order._id || order.id) as string).slice(-6).toUpperCase()}`}
-          </p>
-          <div className="mt-2 text-xs" style={{ color: "var(--color-muted)" }}>
-            {!!order.cafe_name && !!order.venue_name && (
-              <p>{order.cafe_name as string} ({order.venue_name as string})</p>
-            )}
-            {!!order.gst_number && (
-              <p className="font-mono mt-0.5">GSTIN: {order.gst_number as string}</p>
-            )}
-          </div>
-
-          {/* Customer Details */}
-          <div className="flex items-center justify-between p-3 mt-4 rounded-xl bg-amber-500/5 border border-amber-500/10 text-left max-w-sm mx-auto">
-            <div className="flex items-center gap-3">
-              {profilePhoto ? (
-                <img src={profilePhoto} alt={(order.customer_handle as string) || "Customer"} className="w-9 h-9 rounded-full object-cover border border-amber-500/30" />
-              ) : (
-                <div className="w-9 h-9 rounded-full bg-amber-600 text-white text-sm font-bold flex items-center justify-center">
-                  {((order.customer_handle as string) || "C").charAt(0).toUpperCase()}
-                </div>
-              )}
-              <div>
-                <p className="text-xs font-bold text-gray-900">{(order.customer_handle as string) || handle || "Customer"}</p>
-                {(order.customer_email || userEmail) && (
-                  <p className="text-[11px] text-gray-500 font-mono">{(order.customer_email || userEmail) as string}</p>
-                )}
-              </div>
-            </div>
-            <span className="text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded font-semibold">Verified User</span>
-          </div>
-        </div>
-
-        {/* Status tracker */}
-        <div
-          className="rounded-2xl p-6 mb-6"
-          style={{
-            background: "var(--color-surface)",
-            boxShadow: "var(--shadow-md)",
-            border: "1px solid var(--color-border)",
-          }}
-        >
-          <div className="space-y-0">
-            {ORDER_STATUSES.map((status, index) => {
-              const isActive = index <= currentIndex;
-              const isCurrent = index === currentIndex;
-
-              return (
-                <div key={status} className="flex items-start gap-3">
-                  {/* Timeline dot + line */}
-                  <div className="flex flex-col items-center">
-                    <div
-                      className={`w-8 h-8 rounded-full flex items-center justify-center text-sm shrink-0 transition-all duration-500 ${
-                        isCurrent ? "scale-110" : ""
-                      }`}
-                      style={{
-                        background: isActive
-                          ? "var(--color-primary)"
-                          : "var(--color-bg)",
-                        color: isActive
-                          ? "white"
-                          : "var(--color-muted)",
-                        border: isActive
-                          ? "none"
-                          : "2px solid var(--color-border)",
-                      }}
-                    >
-                      {isActive ? (
-                        <CheckCircle size={16} />
-                      ) : (
-                        <span className="text-xs">{index + 1}</span>
-                      )}
-                    </div>
-                    {index < ORDER_STATUSES.length - 1 && (
-                      <div
-                        className="w-0.5 h-8"
-                        style={{
-                          background: index < currentIndex
-                            ? "var(--color-primary)"
-                            : "var(--color-border)",
-                        }}
-                      />
-                    )}
-                  </div>
-
-                  {/* Label */}
-                  <div className="pt-1">
-                    <p
-                      className={`text-sm font-medium ${isCurrent ? "font-semibold" : ""}`}
-                      style={{
-                        color: isActive ? "var(--color-text)" : "var(--color-muted)",
-                      }}
-                    >
-                      {ORDER_STATUS_LABELS[status]}
-                    </p>
-                    {isCurrent && currentStatus !== "served" && (
-                      <p className="text-xs mt-0.5" style={{ color: "var(--color-accent)" }}>
-                        In progress...
-                      </p>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Self Pickup Button */}
-        {currentStatus === "ready" && !(order as any).has_waiters && (
-          <div className="mb-6">
-            <button
-              onClick={handleSelfPickup}
-              disabled={isPickingUp}
-              className="w-full py-4 rounded-xl font-bold text-white transition-all shadow-md hover:scale-[1.01] active:scale-[0.99] flex items-center justify-center gap-2 disabled:opacity-50 disabled:pointer-events-none animate-bounce"
-              style={{ background: "var(--color-primary)" }}
-            >
-              <CheckCircle size={18} /> {isPickingUp ? "Completing..." : "I've Picked Up My Order"}
-            </button>
-          </div>
-        )}
-
-        {/* Order details */}
-        <div
-          className="rounded-2xl overflow-hidden"
-          style={{
-            background: "var(--color-surface)",
-            boxShadow: "var(--shadow-sm)",
-            border: "1px solid var(--color-border)",
-          }}
-        >
-          <div className="px-5 py-3 flex justify-between items-center" style={{ borderBottom: "1px solid var(--color-border)" }}>
-            <h2 className="text-sm font-semibold" style={{ color: "var(--color-text)" }}>
-              Itemized Bill
-            </h2>
-            <span className="text-xs" style={{ color: "var(--color-muted)" }}>
-              {new Date(order.created_at as string).toLocaleString()}
-            </span>
-          </div>
-          <div>
-            {items.map((item, i) => (
-              <div
-                key={i}
-                className="flex items-center justify-between px-5 py-3"
-                style={{
-                  borderBottom:
-                    i < items.length - 1 ? "1px solid var(--color-border)" : "none",
-                }}
-              >
-                <div>
-                  <p className="text-sm" style={{ color: "var(--color-text)" }}>
-                    {item.name} {item.variant_name ? <span className="text-xs text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded ml-1">{item.variant_name}</span> : ""}
-                  </p>
-                  <p className="text-xs" style={{ color: "var(--color-muted)" }}>
-                    × {item.quantity}
-                  </p>
-                </div>
-                <p className="text-sm font-medium" style={{ color: "var(--color-primary)" }}>
-                  ₹{(item.price * item.quantity).toFixed(2)}
-                </p>
-              </div>
-            ))}
-          </div>
-          <div
-            className="flex items-center justify-between px-5 py-3"
-            style={{ borderTop: "1px solid var(--color-border)", background: "var(--color-bg)" }}
-          >
-            <span className="text-sm font-medium" style={{ color: "var(--color-muted)" }}>Total</span>
-            <span
-              className="text-lg font-bold"
+          {/* Web Header — hidden in print */}
+          <div className="text-center mb-6 print:hidden">
+            <p className="text-5xl mb-3">
+              {currentStatus === "served" ? "🎉" : ORDER_STATUS_EMOJI[currentStatus as keyof typeof ORDER_STATUS_EMOJI] || "📋"}
+            </p>
+            <h1
+              className="text-2xl font-bold mb-1"
               style={{ fontFamily: "var(--font-heading)", color: "var(--color-primary)" }}
             >
-              ₹{(order.total as number).toFixed(2)}
-            </span>
+              {currentStatus === "served" ? "Tax Invoice / Bill" : "Order Tracker"}
+            </h1>
+            <p className="text-sm font-semibold" style={{ color: "var(--color-text)" }}>
+              Order {order.order_token as string || `#${((order._id || order.id) as string).slice(-6).toUpperCase()}`}
+            </p>
           </div>
-        </div>
 
-        {/* Payment info */}
-        <div className="mt-4 text-center">
-          <span
-            className={`inline-block text-xs px-3.5 py-2 rounded-full font-bold shadow-xs ${
-              order.payment_status === "paid" || currentStatus === "served"
-                ? "bg-emerald-100 text-emerald-800 border border-emerald-300"
-                : order.payment_status === "pending_cash"
-                ? "bg-amber-100 text-amber-800 border border-amber-300"
-                : "bg-gray-100 text-gray-700 border border-gray-300"
-            }`}
-          >
-            {order.payment_status === "paid" || currentStatus === "served"
-              ? "✓ Payment Completed"
-              : order.payment_status === "pending_cash"
-              ? `💵 Pay ₹${(order.total as number).toFixed(2)} in Cash to Staff`
-              : "⏳ Payment Pending"}
-          </span>
-        </div>
-
-        {/* Download Invoice Button */}
-        <div className="mt-8 text-center print:hidden">
-          <button
-            onClick={handlePrint}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all"
+          {/* Status Tracker Timeline — hidden in print */}
+          <div
+            className="rounded-2xl p-6 mb-6 print:hidden"
             style={{
-              background: "white",
-              color: "var(--color-primary)",
+              background: "var(--color-surface)",
+              boxShadow: "var(--shadow-md)",
               border: "1px solid var(--color-border)",
-              boxShadow: "var(--shadow-sm)",
             }}
           >
-            <Printer size={16} />
-            Download Invoice
-          </button>
+            <div className="space-y-0">
+              {ORDER_STATUSES.map((status, index) => {
+                const isActive = index <= currentIndex;
+                const isCurrent = index === currentIndex;
+
+                return (
+                  <div key={status} className="flex items-start gap-3">
+                    <div className="flex flex-col items-center">
+                      <div
+                        className={`w-8 h-8 rounded-full flex items-center justify-center text-sm shrink-0 transition-all duration-500 ${
+                          isCurrent ? "scale-110" : ""
+                        }`}
+                        style={{
+                          background: isActive
+                            ? "var(--color-primary)"
+                            : "var(--color-bg)",
+                          color: isActive ? "white" : "var(--color-muted)",
+                          border: isActive ? "none" : "2px solid var(--color-border)",
+                        }}
+                      >
+                        {isActive ? (
+                          <CheckCircle size={16} />
+                        ) : (
+                          <span className="text-xs">{index + 1}</span>
+                        )}
+                      </div>
+                      {index < ORDER_STATUSES.length - 1 && (
+                        <div
+                          className="w-0.5 h-8"
+                          style={{
+                            background: index < currentIndex
+                              ? "var(--color-primary)"
+                              : "var(--color-border)",
+                          }}
+                        />
+                      )}
+                    </div>
+
+                    <div className="pt-1">
+                      <p
+                        className={`text-sm font-medium ${isCurrent ? "font-semibold" : ""}`}
+                        style={{
+                          color: isActive ? "var(--color-text)" : "var(--color-muted)",
+                        }}
+                      >
+                        {ORDER_STATUS_LABELS[status]}
+                      </p>
+                      {isCurrent && currentStatus !== "served" && (
+                        <p className="text-xs mt-0.5" style={{ color: "var(--color-accent)" }}>
+                          In progress...
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Self Pickup Button */}
+          {currentStatus === "ready" && !(order as any).has_waiters && (
+            <div className="mb-6 print:hidden">
+              <button
+                onClick={handleSelfPickup}
+                disabled={isPickingUp}
+                className="w-full py-4 rounded-xl font-bold text-white transition-all shadow-md hover:scale-[1.01] active:scale-[0.99] flex items-center justify-center gap-2 disabled:opacity-50 disabled:pointer-events-none animate-bounce"
+                style={{ background: "var(--color-primary)" }}
+              >
+                <CheckCircle size={18} /> {isPickingUp ? "Completing..." : "I've Picked Up My Order"}
+              </button>
+            </div>
+          )}
+
+          {/* Industry Standard Tax Invoice Card (Visible on Web & Print) */}
+          <div
+            className="invoice-card rounded-2xl overflow-hidden bg-white text-gray-900 border border-gray-200 shadow-lg"
+          >
+            {/* Invoice Header */}
+            <div className="p-6 border-b border-dashed border-gray-300 text-center bg-stone-50">
+              <div className="flex items-center justify-center gap-2 mb-2">
+                <Receipt className="w-6 h-6 text-amber-800" />
+                <span className="text-xs font-black uppercase tracking-widest text-amber-900">TAX INVOICE</span>
+              </div>
+              <h2 className="text-xl font-black text-stone-900 tracking-tight">
+                {(order.cafe_name as string) || "PERCH CAFE"}
+              </h2>
+              {!!order.venue_name && (
+                <p className="text-xs font-medium text-stone-600 mt-0.5">{order.venue_name as string}</p>
+              )}
+              {!!order.gst_number && (
+                <p className="text-[11px] font-mono text-stone-500 mt-1">GSTIN: {order.gst_number as string}</p>
+              )}
+
+              {/* Order Token Pill */}
+              <div className="mt-3 inline-block bg-amber-900 text-white px-4 py-1.5 rounded-full font-black text-sm tracking-wide shadow-xs">
+                ORDER #{order.order_token as string || ((order._id || order.id) as string).slice(-6).toUpperCase()}
+              </div>
+            </div>
+
+            {/* Meta Details */}
+            <div className="p-4 border-b border-stone-200 text-xs grid grid-cols-2 gap-3 bg-white">
+              <div>
+                <span className="text-gray-400 font-medium block">Date & Time:</span>
+                <span className="font-semibold text-gray-800">
+                  {new Date(order.created_at as string).toLocaleString()}
+                </span>
+              </div>
+              <div>
+                <span className="text-gray-400 font-medium block">Customer:</span>
+                <span className="font-semibold text-gray-800 truncate block">
+                  {(order.customer_handle as string) || handle || "Valued Customer"}
+                </span>
+              </div>
+            </div>
+
+            {/* Line Items Table */}
+            <div className="p-4">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="border-b border-stone-200 text-stone-400 font-bold uppercase text-[10px] tracking-wider text-left">
+                    <th className="pb-2">ITEM</th>
+                    <th className="pb-2 text-center">QTY</th>
+                    <th className="pb-2 text-right">RATE</th>
+                    <th className="pb-2 text-right">AMOUNT</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-stone-100">
+                  {items.map((item, idx) => (
+                    <tr key={idx} className="text-stone-800">
+                      <td className="py-2.5 font-medium pr-2">
+                        {item.name}
+                        {item.variant_name && (
+                          <span className="block text-[10px] text-stone-400 font-normal">
+                            ({item.variant_name})
+                          </span>
+                        )}
+                      </td>
+                      <td className="py-2.5 text-center font-bold">{item.quantity}</td>
+                      <td className="py-2.5 text-right font-mono text-stone-600">₹{item.price.toFixed(2)}</td>
+                      <td className="py-2.5 text-right font-bold font-mono">₹{(item.price * item.quantity).toFixed(2)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+
+              {/* Tax & Total Calculation */}
+              <div className="mt-4 pt-3 border-t border-dashed border-stone-300 space-y-1.5 text-xs">
+                <div className="flex justify-between text-stone-500">
+                  <span>Subtotal</span>
+                  <span className="font-mono">₹{subtotal.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between text-stone-500">
+                  <span>CGST (2.5%)</span>
+                  <span className="font-mono">₹{cgst.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between text-stone-500">
+                  <span>SGST (2.5%)</span>
+                  <span className="font-mono">₹{sgst.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between items-center text-sm font-black text-stone-900 pt-2 border-t border-stone-200">
+                  <span>GRAND TOTAL</span>
+                  <span className="text-base font-mono text-amber-900">₹{totalAmount.toFixed(2)}</span>
+                </div>
+              </div>
+
+              {/* Payment Status Stamp */}
+              <div className="mt-5 text-center">
+                <span
+                  className={`inline-flex items-center gap-1.5 text-xs px-4 py-2 rounded-full font-extrabold tracking-wide uppercase shadow-xs ${
+                    order.payment_status === "paid" || currentStatus === "served"
+                      ? "bg-emerald-100 text-emerald-900 border border-emerald-300"
+                      : order.payment_status === "pending_cash"
+                      ? "bg-amber-100 text-amber-900 border border-amber-300"
+                      : "bg-stone-100 text-stone-800 border border-stone-300"
+                  }`}
+                >
+                  <ShieldCheck size={14} />
+                  {order.payment_status === "paid" || currentStatus === "served"
+                    ? "✓ Payment Completed"
+                    : order.payment_status === "pending_cash"
+                    ? `💵 Cash on Delivery (Pay ₹${totalAmount.toFixed(2)})`
+                    : "⏳ Payment Pending"}
+                </span>
+              </div>
+            </div>
+
+            {/* Receipt Footer */}
+            <div className="p-4 bg-stone-50 border-t border-stone-200 text-center text-[10px] text-stone-400 space-y-0.5">
+              <p className="font-medium text-stone-500">Thank you for dining with us!</p>
+              <p>Powered by Perch OS — www.perchos.shop</p>
+            </div>
+          </div>
+
+          {/* Download / Print Invoice Button (Hidden during print) */}
+          <div className="mt-8 text-center print:hidden">
+            <button
+              onClick={handlePrint}
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-bold shadow-md hover:shadow-lg transition-all cursor-pointer text-white"
+              style={{
+                background: "var(--color-primary)",
+              }}
+            >
+              <Printer size={16} />
+              Print / Download Official Tax Invoice
+            </button>
+          </div>
         </div>
       </div>
     </div>
-  </div>
-);
+  );
 }
-
-
-

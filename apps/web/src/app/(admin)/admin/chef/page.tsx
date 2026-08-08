@@ -51,8 +51,12 @@ export default function ChefPortalPage() {
   useEffect(() => {
     if (branchId) {
       fetchOrders(); // immediate fetch on change
-      const interval = setInterval(fetchOrders, 10000);
-      return () => clearInterval(interval);
+      const interval = setInterval(fetchOrders, 2000);
+      window.addEventListener("order_status_updated", fetchOrders);
+      return () => {
+        clearInterval(interval);
+        window.removeEventListener("order_status_updated", fetchOrders);
+      };
     }
   }, [branchId]);
 
@@ -168,6 +172,7 @@ export default function ChefPortalPage() {
       const t = localStorage.getItem("perch_admin_token") || "";
       await acceptOrder(orderId, t);
       fetchOrders();
+      window.dispatchEvent(new Event("order_status_updated"));
     } catch (e: any) {
       if (e?.status === 409) {
         alert("This order was already accepted by another chef.");
@@ -175,6 +180,7 @@ export default function ChefPortalPage() {
         alert("Failed to accept order.");
       }
       fetchOrders();
+      window.dispatchEvent(new Event("order_status_updated"));
     }
   };
 

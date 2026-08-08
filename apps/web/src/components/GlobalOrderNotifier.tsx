@@ -66,6 +66,10 @@ export function GlobalOrderNotifier({ token, venueId, role }: { token: string; v
           const data = JSON.parse(event.data);
           const currentRole = roleRef.current;
           
+          if (data.type === "order_accepted" || data.type === "system_order" || data.type === "order_assigned") {
+            window.dispatchEvent(new Event("order_status_updated"));
+          }
+
           if (currentRole === "chef") {
             if (data.type === "system_order" && data.payload && data.payload.type === "new_order") {
               setPopupOrder(data.payload);
@@ -170,6 +174,7 @@ export function GlobalOrderNotifier({ token, venueId, role }: { token: string; v
         await acceptOrder(popupOrder.order_id, token);
       }
       setPopupOrder(null);
+      window.dispatchEvent(new Event("order_status_updated"));
     } catch (e: any) {
       if (e?.status === 409) {
         alert("This order has already been accepted by another team member.");
@@ -177,6 +182,7 @@ export function GlobalOrderNotifier({ token, venueId, role }: { token: string; v
         console.error("Failed to accept order:", e);
       }
       setPopupOrder(null);
+      window.dispatchEvent(new Event("order_status_updated"));
     }
   };
 
