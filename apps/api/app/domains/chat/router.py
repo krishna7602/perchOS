@@ -23,12 +23,17 @@ async def send_venue_message(
     customer: CustomerProfile = Depends(get_current_customer),
 ):
     """REST endpoint to send a message to a venue chat room."""
-    # Ensure customer is checked into this venue
-    if not customer.current_venue_id or str(customer.current_venue_id) != venue_id:
+    try:
+        v_id = PydanticObjectId(venue_id)
+    except Exception:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="must_be_checked_in_to_send_messages",
+            detail="invalid_venue_id",
         )
+
+    if not customer.current_venue_id or customer.current_venue_id != v_id:
+        customer.current_venue_id = v_id
+        await customer.save()
 
     # Moderate message
     verdict = moderate_message(payload.content)
@@ -39,7 +44,7 @@ async def send_venue_message(
         )
 
     msg = VenueChatMessage(
-        venue_id=customer.current_venue_id,
+        venue_id=v_id,
         sender_id=customer.id, # type: ignore
         content=payload.content,
         created_at=datetime.utcnow()
@@ -65,14 +70,6 @@ async def get_venue_messages(
     customer: CustomerProfile = Depends(get_current_customer),
 ):
     """REST endpoint to get messages in a venue chat room with display name deduplication."""
-    # Ensure customer is checked into this venue
-    if not customer.current_venue_id or str(customer.current_venue_id) != venue_id:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="must_be_checked_in_to_view_messages",
-        )
-
-    # Fetch messages
     try:
         v_id = PydanticObjectId(venue_id)
     except Exception:
@@ -80,6 +77,12 @@ async def get_venue_messages(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="invalid_venue_id",
         )
+
+    if not customer.current_venue_id or customer.current_venue_id != v_id:
+        customer.current_venue_id = v_id
+        await customer.save()
+
+    # Fetch messages
     messages = await VenueChatMessage.find(
         VenueChatMessage.venue_id == v_id
     ).sort("-created_at").limit(limit).to_list()
@@ -123,6 +126,10 @@ async def get_venue_messages(
         if custom_status:
             status_emoji = custom_status.status_emoji
 
+        iso_time = msg.created_at.isoformat()
+        if not iso_time.endswith("Z"):
+            iso_time += "Z"
+
         response_messages.append({
             "id": str(msg.id),
             "sender_id": str(msg.sender_id),
@@ -132,7 +139,7 @@ async def get_venue_messages(
             "profile_photo": profile_photo,
             "status_emoji": status_emoji,
             "content": msg.content,
-            "created_at": msg.created_at.isoformat(),
+            "created_at": iso_time,
             "edited": msg.edited_at is not None,
             "reactions": json_safe(msg.reactions),
             "replies": json_safe(msg.replies),
@@ -348,15 +355,14 @@ async def get_venue_polls(
 ):
     """Get all active polls for a venue."""
     from app.domains.networking.models import VenuePoll
-    if not customer.current_venue_id or str(customer.current_venue_id) != venue_id:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="must_be_checked_in_to_view_polls",
-        )
     try:
         v_id = PydanticObjectId(venue_id)
     except Exception:
         raise HTTPException(status_code=400, detail="invalid_venue_id")
+
+    if not customer.current_venue_id or customer.current_venue_id != v_id:
+        customer.current_venue_id = v_id
+        await customer.save()
 
     polls = await VenuePoll.find(
         VenuePoll.venue_id == v_id,
@@ -383,11 +389,15 @@ async def get_venue_polls(
                 "percentage": percentage
             })
 
+        iso_time = poll.created_at.isoformat()
+        if not iso_time.endswith("Z"):
+            iso_time += "Z"
+
         response.append({
             "id": str(poll.id),
             "question": poll.question,
             "creator_handle": poll.creator_handle,
-            "created_at": poll.created_at.isoformat(),
+            "created_at": iso_time,
             "total_votes": total_votes,
             "options": options_data,
             "voted_option_id": voted_option_id
@@ -406,19 +416,17 @@ async def create_venue_poll(
     from app.domains.networking.models import VenuePoll, PollOption
     import uuid
 
-    if not customer.current_venue_id or str(customer.current_venue_id) != venue_id:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="must_be_checked_in_to_create_polls",
-        )
-
-    if not payload.question.strip() or len(payload.options) < 2:
-        raise HTTPException(status_code=400, detail="poll_requires_question_and_2_options")
-
     try:
         v_id = PydanticObjectId(venue_id)
     except Exception:
         raise HTTPException(status_code=400, detail="invalid_venue_id")
+
+    if not customer.current_venue_id or customer.current_venue_id != v_id:
+        customer.current_venue_id = v_id
+        await customer.save()
+
+    if not payload.question.strip() or len(payload.options) < 2:
+        raise HTTPException(status_code=400, detail="poll_requires_question_and_2_options")
 
     options = [
         PollOption(id=f"opt_{uuid.uuid4().hex[:6]}", text=opt_text.strip(), voters=[])
@@ -448,11 +456,13 @@ async def vote_venue_poll(
     """Vote for an option in a poll."""
     from app.domains.networking.models import VenuePoll
 
-    if not customer.current_venue_id or str(customer.current_venue_id) != venue_id:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="must_be_checked_in_to_vote",
-        )
+    try:
+        v_id = PydanticObjectId(venue_id)
+        if not customer.current_venue_id or customer.current_venue_id != v_id:
+            customer.current_venue_id = v_id
+            await customer.save()
+    except Exception:
+        pass
 
     try:
         p_id = PydanticObjectId(poll_id)

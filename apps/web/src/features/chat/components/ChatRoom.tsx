@@ -107,29 +107,29 @@ export function ChatRoom({
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Poll Messages every 3 seconds & cap client state at 3-hour retention window
+  // Poll Messages every 3 seconds & persist state
   useEffect(() => {
     const fetchMessages = async () => {
       try {
         const data = await getVenueMessages(venueId, chatToken);
-        const THREE_HOURS_MS = 3 * 60 * 60 * 1000;
-        const cutoff = Date.now() - THREE_HOURS_MS;
-
-        const freshData = (data.messages || []).filter(
-          (m: any) => new Date(m.created_at).getTime() >= cutoff
-        );
-
-        const mapped: DisplayMessage[] = freshData.map((m: any) => ({
-          id: m.id,
-          type: "message",
-          from: m.display_name,
-          username: m.username,
-          showSuffix: m.show_username_suffix,
-          profilePhoto: m.profile_photo,
-          statusEmoji: m.status_emoji,
-          body: m.content,
-          timestamp: new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        }));
+        const mapped: DisplayMessage[] = (data.messages || []).map((m: any) => {
+          const raw = m.created_at || "";
+          const dateStr = raw.endsWith("Z") ? raw : raw + "Z";
+          const d = new Date(dateStr);
+          return {
+            id: m.id,
+            type: "message",
+            from: m.display_name,
+            username: m.username,
+            showSuffix: m.show_username_suffix,
+            profilePhoto: m.profile_photo,
+            statusEmoji: m.status_emoji,
+            body: m.content,
+            timestamp: isNaN(d.getTime())
+              ? "Just now"
+              : d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          };
+        });
         setMessages(mapped);
       } catch (err) {
         console.error("Error polling messages", err);
@@ -558,50 +558,6 @@ export function ChatRoom({
             className="w-6 h-6 rounded-full object-cover border border-amber-500/40 bg-amber-50" 
           />
           <span className="text-xs font-bold text-gray-800 leading-tight">{handle}</span>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => { setShowPolls(!showPolls); if (!showPolls) { setIsPollsLoading(true); } }}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all hover:scale-105 active:scale-95 shadow-xs cursor-pointer ${
-              showPolls ? "ring-2 ring-amber-500/30" : ""
-            }`}
-            style={{
-              background: showPolls ? "rgba(217, 119, 6, 0.22)" : "rgba(217, 119, 6, 0.12)",
-              color: "#b45309",
-              border: "1px solid rgba(217, 119, 6, 0.25)"
-            }}
-          >
-            <Vote size={14} />
-            Polls
-          </button>
-
-          {menuQrToken && (
-            <Link
-              href={`/venue/${venueId}/menu`}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all hover:scale-105 active:scale-95 shadow-xs"
-              style={{
-                background: "rgba(124, 148, 115, 0.15)",
-                color: "var(--color-accent)",
-                border: "1px solid rgba(124, 148, 115, 0.25)"
-              }}
-            >
-              <UtensilsCrossed size={14} />
-              Menu
-            </Link>
-          )}
-          <button
-            onClick={onLeave}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all hover:scale-105 active:scale-95 cursor-pointer shadow-xs"
-            style={{
-              background: "rgba(185, 84, 45, 0.12)",
-              color: "var(--color-danger)",
-              border: "1px solid rgba(185, 84, 45, 0.2)"
-            }}
-          >
-            <LogOut size={14} />
-            Leave
-          </button>
         </div>
       </div>
 
