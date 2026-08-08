@@ -74,7 +74,7 @@ function GoogleCallbackContent() {
             setStatus("success");
 
             const targetVenueId = loginRes.venue_id || state || "";
-            window.location.href = targetVenueId ? `/venue/${targetVenueId}/chat` : "/";
+            window.location.href = targetVenueId ? `/venue/${targetVenueId}/menu` : "/";
           } catch (err: any) {
             setStatus("error");
             setErrorMsg(err.message || err.detail || "Authentication failed.");

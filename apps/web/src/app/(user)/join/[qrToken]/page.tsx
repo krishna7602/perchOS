@@ -153,7 +153,7 @@ function JoinPageContent() {
 
     setStep("joining");
     const targetVenueId = data.venue_id || venue?.id || "";
-    router.push(targetVenueId ? `/venue/${targetVenueId}/chat` : "/");
+    router.push(targetVenueId ? `/venue/${targetVenueId}/menu` : "/");
   };
 
   const handleGoogleLogin = () => {
@@ -259,7 +259,7 @@ function JoinPageContent() {
       }
 
       setStep("joining");
-      const destination = targetVenueId ? `/venue/${targetVenueId}/chat` : "/";
+      const destination = targetVenueId ? `/venue/${targetVenueId}/menu` : "/";
       router.push(destination);
     } catch (err: any) {
       console.error("Onboarding submit error:", err);
