@@ -272,25 +272,13 @@ export function ChatRoom({
     const fetchDMs = async () => {
       try {
         const data = await getDirectMessages(dmThread.connectionId, chatToken);
-        const mapped = data.messages.map((m: any) => ({
-          from: m.sender_id === sessionStorage.getItem("perch_username") ? handle : dmThread.handle,
+        const mappedMessages = (data.messages || []).map((m: any) => ({
+          from: m.is_mine ? handle : dmThread.handle,
           body: m.content,
-          isMine: m.sender_id !== dmThread.connectionId && m.sender_id !== dmThread.handle, // Handled inside dm mapper or fallback
+          isMine: Boolean(m.is_mine),
         }));
-        
-        // Better matching of sender to isMine: check if sender matches current user's profile info
-        const updatedMessages = data.messages.map((m: any) => {
-          const myUsername = sessionStorage.getItem("perch_username");
-          const isMine = m.sender_id === myUsername || m.sender_id !== dmThread.connectionId; // fallback logic
-          return {
-            from: isMine ? handle : dmThread.handle,
-            body: m.content,
-            isMine: isMine,
-          };
-        });
 
-        // Simple validation or just update
-        setDmThread(prev => prev ? { ...prev, messages: updatedMessages.reverse() } : null);
+        setDmThread(prev => prev ? { ...prev, messages: mappedMessages.reverse() } : null);
       } catch (err) {
         console.error("Error polling DMs", err);
       }
@@ -420,15 +408,12 @@ export function ChatRoom({
       await sendDirectMessage(dmThread.connectionId, body, chatToken);
       // Immediate update
       const data = await getDirectMessages(dmThread.connectionId, chatToken);
-      const updatedMessages = data.messages.map((m: any) => {
-        const myUsername = sessionStorage.getItem("perch_username");
-        return {
-          from: m.sender_id === myUsername ? handle : dmThread.handle,
-          body: m.content,
-          isMine: m.sender_id === myUsername,
-        };
-      });
-      setDmThread(prev => prev ? { ...prev, messages: updatedMessages.reverse() } : null);
+      const mappedMessages = (data.messages || []).map((m: any) => ({
+        from: m.is_mine ? handle : dmThread.handle,
+        body: m.content,
+        isMine: Boolean(m.is_mine),
+      }));
+      setDmThread(prev => prev ? { ...prev, messages: mappedMessages.reverse() } : null);
     } catch (err) {
       console.error(err);
     }

@@ -58,6 +58,7 @@ async def get_direct_messages(
                 "sender_id": str(m.sender_id),
                 "content": m.content,
                 "is_read": m.is_read,
+                "is_mine": (m.sender_id == customer.id),
                 "created_at": m.created_at.isoformat()
             } for m in messages
         ]
@@ -110,6 +111,7 @@ async def send_direct_message(
         "sender_id": str(msg.sender_id),
         "content": msg.content,
         "is_read": msg.is_read,
+        "is_mine": True,
         "created_at": msg.created_at.isoformat()
     }
 
