@@ -109,7 +109,7 @@ export default function OrderPage() {
 
   return (
     <div
-      className="min-h-[100dvh] flex flex-col print:bg-white print:min-h-0 print:h-auto"
+      className="min-h-full flex flex-col print:bg-white print:min-h-0 print:h-auto"
       style={{ background: "var(--color-bg)" }}
     >
       <style>{`
@@ -134,10 +134,9 @@ export default function OrderPage() {
       `}</style>
 
       <div
-        className="flex-1 overflow-y-auto px-4 py-6 print:p-0 print:overflow-visible"
+        className="flex-1 px-4 py-6 pb-36 print:p-0 print:overflow-visible"
         style={{
           WebkitOverflowScrolling: "touch",
-          paddingBottom: "calc(var(--bottom-nav-height, 80px) + 1.5rem)",
         }}
       >
         <div className="max-w-lg mx-auto print:max-w-full">
