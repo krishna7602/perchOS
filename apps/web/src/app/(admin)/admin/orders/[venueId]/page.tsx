@@ -160,12 +160,12 @@ export default function OrdersKanbanPage() {
                         </span>
                         <span
                           className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                            order.payment_status === "paid"
+                            order.payment_status === "paid" || order.order_status === "served"
                               ? "status-ready"
                               : "bg-amber-100 text-amber-800 border border-amber-300"
                           }`}
                         >
-                          {order.payment_status === "paid" ? "Paid" : "Cash Pending"}
+                          {order.payment_status === "paid" || order.order_status === "served" ? "Paid" : "Cash Pending"}
                         </span>
                       </div>
                       <p className="text-xs font-medium mb-1" style={{ color: "var(--color-primary)" }}>

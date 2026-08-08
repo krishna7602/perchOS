@@ -312,18 +312,18 @@ export default function OrderPage() {
         {/* Payment info */}
         <div className="mt-4 text-center">
           <span
-            className={`inline-block text-xs px-3 py-1.5 rounded-full font-medium ${
-              order.payment_status === "paid"
-                ? "status-ready"
+            className={`inline-block text-xs px-3.5 py-2 rounded-full font-bold shadow-xs ${
+              order.payment_status === "paid" || currentStatus === "served"
+                ? "bg-emerald-100 text-emerald-800 border border-emerald-300"
                 : order.payment_status === "pending_cash"
-                ? "status-preparing"
-                : "status-received"
+                ? "bg-amber-100 text-amber-800 border border-amber-300"
+                : "bg-gray-100 text-gray-700 border border-gray-300"
             }`}
           >
-            {order.payment_status === "paid"
-              ? "✓ Paid"
+            {order.payment_status === "paid" || currentStatus === "served"
+              ? "✓ Payment Completed"
               : order.payment_status === "pending_cash"
-              ? "💵 Pay on Delivery"
+              ? `💵 Pay ₹${(order.total as number).toFixed(2)} in Cash to Staff`
               : "⏳ Payment Pending"}
           </span>
         </div>

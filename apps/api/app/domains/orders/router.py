@@ -304,6 +304,8 @@ async def update_order_status(
     if payload.order_status in ["ready", "served"] and not order.completed_at:
         from datetime import datetime
         update_data["completed_at"] = datetime.utcnow()
+    if payload.order_status == "served":
+        update_data["payment_status"] = "paid"
 
     await Order.get_motor_collection().update_one(
         {"_id": oid},
@@ -521,6 +523,7 @@ async def self_pickup_order(order_id: str):
         raise HTTPException(status_code=400, detail="order_not_ready_for_pickup")
         
     order.order_status = "served"
+    order.payment_status = "paid"
     from datetime import datetime
     order.completed_at = datetime.utcnow()
     await order.save()
