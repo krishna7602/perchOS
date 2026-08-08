@@ -4,6 +4,8 @@ import { useState, useEffect } from "react";
 import { listCafes, registerCafe, updateCafe, deleteCafe, resetCafeOwnerPassword, CafeItem } from "@/features/superadmin/api";
 import { Shield, Search, MoreVertical, Edit2, KeyRound, Trash2 } from "lucide-react";
 
+import { API_URL } from "@/lib/apiClient";
+
 export default function SuperAdminCafesPage() {
   const [cafes, setCafes] = useState<CafeItem[]>([]);
   const [search, setSearch] = useState("");
@@ -43,7 +45,7 @@ export default function SuperAdminCafesPage() {
       // actually register-cafe requires a password in the payload right now.
       const tempPass = Math.random().toString(36).slice(-8);
       
-      const res = await fetch("http://localhost:8000/superadmin/register-cafe", {
+      const res = await fetch(`${API_URL}/superadmin/register-cafe`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
         body: JSON.stringify({ cafe_name: newCafeName, password: tempPass, gst_number: newCafeGst })
