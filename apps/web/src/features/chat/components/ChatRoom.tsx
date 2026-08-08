@@ -106,6 +106,8 @@ export function ChatRoom({
   } | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const chatContainerRef = useRef<HTMLDivElement>(null);
+  const isInitialLoadRef = useRef(true);
 
   // Poll Messages every 3 seconds & persist state
   useEffect(() => {
@@ -299,8 +301,26 @@ export function ChatRoom({
     return () => clearInterval(interval);
   }, [dmThread?.connectionId, chatToken]);
 
+  const scrollToBottom = (behavior: ScrollBehavior = "smooth") => {
+    messagesEndRef.current?.scrollIntoView({ behavior });
+  };
+
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (messages.length === 0) return;
+
+    if (isInitialLoadRef.current) {
+      isInitialLoadRef.current = false;
+      scrollToBottom("auto");
+      return;
+    }
+
+    const container = chatContainerRef.current;
+    if (container) {
+      const distanceFromBottom = container.scrollHeight - container.scrollTop - container.clientHeight;
+      if (distanceFromBottom < 150) {
+        scrollToBottom("smooth");
+      }
+    }
   }, [messages]);
 
   const handleSend = async () => {
@@ -311,18 +331,26 @@ export function ChatRoom({
       await sendVenueMessage(venueId, body, chatToken);
       // Immediate pull
       const data = await getVenueMessages(venueId, chatToken);
-      const mapped: DisplayMessage[] = data.messages.map((m: any) => ({
-        id: m.id,
-        type: "message",
-        from: m.display_name,
-        username: m.username,
-        showSuffix: m.show_username_suffix,
-        profilePhoto: m.profile_photo,
-        statusEmoji: m.status_emoji,
-        body: m.content,
-        timestamp: new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      }));
+      const mapped: DisplayMessage[] = (data.messages || []).map((m: any) => {
+        const raw = m.created_at || "";
+        const dateStr = raw.endsWith("Z") ? raw : raw + "Z";
+        const d = new Date(dateStr);
+        return {
+          id: m.id,
+          type: "message",
+          from: m.display_name,
+          username: m.username,
+          showSuffix: m.show_username_suffix,
+          profilePhoto: m.profile_photo,
+          statusEmoji: m.status_emoji,
+          body: m.content,
+          timestamp: isNaN(d.getTime())
+            ? "Just now"
+            : d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        };
+      });
       setMessages(mapped);
+      setTimeout(() => scrollToBottom("smooth"), 50);
     } catch (err: any) {
       console.error(err);
     }
@@ -572,7 +600,7 @@ export function ChatRoom({
       {/* Messages Feed + Polls Panel */}
       <div className="flex-1 min-h-0 flex relative overflow-hidden">
         {/* Chat Messages — always visible */}
-        <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4 scroll-smooth">
+        <div ref={chatContainerRef} className="flex-1 overflow-y-auto px-4 py-4 space-y-4 scroll-smooth">
           {messages.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full text-center p-8 animate-fade-in">
               <div className="relative mb-4">
