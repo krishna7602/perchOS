@@ -4,7 +4,7 @@ from app.services.message_service import prune_expired_messages
 
 
 async def prune_all_rooms_loop():
-    """Background task looping every 5 minutes to prune expired chat messages across all rooms."""
+    """Background task looping every 2 minutes to prune expired chat messages (>30 min) across all rooms."""
     while True:
         try:
             redis = get_redis()
@@ -16,11 +16,10 @@ async def prune_all_rooms_loop():
                         parts = key_str.split(":")
                         if len(parts) >= 2:
                             room_id = parts[1]
-                            await prune_expired_messages(room_id)
+                            await prune_expired_messages(room_id, window_minutes=30)
                 except Exception:
-                    # Catch local Redis connection error silently if Redis is offline
                     pass
         except Exception:
             pass
 
-        await asyncio.sleep(300)  # run every 5 minutes
+        await asyncio.sleep(120)  # run every 2 minutes

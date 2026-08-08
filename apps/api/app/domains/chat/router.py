@@ -9,6 +9,9 @@ from app.domains.chat.moderation import moderate_message
 from app.deps import get_current_customer
 from app.domains.networking.models import CustomerProfile, VenueChatMessage, UserStatus
 
+import uuid
+from app.services.message_service import publish_message, get_recent_messages
+
 router = APIRouter()
 
 
@@ -22,7 +25,7 @@ async def send_venue_message(
     payload: SendMessageRequest,
     customer: CustomerProfile = Depends(get_current_customer),
 ):
-    """REST endpoint to send a message to a venue chat room."""
+    """REST endpoint to send a message to a venue chat room (Redis 30-min TTL)."""
     try:
         v_id = PydanticObjectId(venue_id)
     except Exception:
@@ -43,14 +46,27 @@ async def send_venue_message(
             detail=f"message_rejected: {verdict}",
         )
 
-    msg = VenueChatMessage(
-        venue_id=v_id,
-        sender_id=customer.id, # type: ignore
-        content=payload.content,
-        created_at=datetime.utcnow()
-    )
-    await msg.insert()
-    return {"status": "success", "message_id": str(msg.id)}
+    iso_now = datetime.utcnow().isoformat() + "Z"
+    msg_id = str(uuid.uuid4())
+
+    msg_dict = {
+        "id": msg_id,
+        "sender_id": str(customer.id),
+        "display_name": customer.display_name,
+        "username": customer.username,
+        "show_username_suffix": False,
+        "profile_photo": customer.profile_photo,
+        "status_emoji": "🟢",
+        "content": payload.content,
+        "created_at": iso_now,
+        "edited": False,
+        "reactions": {},
+        "replies": [],
+    }
+
+    # Store in Redis sorted set with 30-minute retention score (no DB storage)
+    await publish_message(venue_id, msg_dict)
+    return {"status": "success", "message_id": msg_id}
 
 
 def json_safe(val):
@@ -69,7 +85,7 @@ async def get_venue_messages(
     limit: int = Query(50, ge=1, le=100),
     customer: CustomerProfile = Depends(get_current_customer),
 ):
-    """REST endpoint to get messages in a venue chat room with display name deduplication."""
+    """REST endpoint to get messages in a venue chat room (30-minute active window from Redis)."""
     try:
         v_id = PydanticObjectId(venue_id)
     except Exception:
@@ -82,70 +98,13 @@ async def get_venue_messages(
         customer.current_venue_id = v_id
         await customer.save()
 
-    # Fetch messages
-    messages = await VenueChatMessage.find(
-        VenueChatMessage.venue_id == v_id
-    ).sort("-created_at").limit(limit).to_list()
+    # Fetch active messages within 30-minute retention window from Redis
+    messages = await get_recent_messages(venue_id, window_minutes=30)
 
-    # Reorder chronologically
-    messages.reverse()
+    if len(messages) > limit:
+        messages = messages[-limit:]
 
-    # Fetch active profiles in this venue to determine duplicate display names
-    active_profiles = await CustomerProfile.find(
-        CustomerProfile.current_venue_id == v_id
-    ).to_list()
-
-    display_names = [p.display_name for p in active_profiles]
-    duplicates = {name for name in display_names if display_names.count(name) > 1}
-
-    # Cache profiles to avoid N+1 queries for sender hydration
-    profile_cache = {p.id: p for p in active_profiles}
-
-    response_messages = []
-    for msg in messages:
-        sender = profile_cache.get(msg.sender_id)
-        if not sender:
-            # Fallback load if not currently active/in cache
-            sender = await CustomerProfile.get(msg.sender_id)
-
-        if not sender:
-            # Placeholder for deleted/unknown sender
-            display_name = "Unknown User"
-            username = "unknown"
-            profile_photo = None
-            show_suffix = False
-        else:
-            display_name = sender.display_name
-            username = sender.username
-            profile_photo = sender.profile_photo
-            show_suffix = sender.display_name in duplicates
-
-        # Get status
-        status_emoji = "🟢"  # Default to active green status
-        custom_status = await UserStatus.find_one(UserStatus.user_id == msg.sender_id)
-        if custom_status:
-            status_emoji = custom_status.status_emoji
-
-        iso_time = msg.created_at.isoformat()
-        if not iso_time.endswith("Z"):
-            iso_time += "Z"
-
-        response_messages.append({
-            "id": str(msg.id),
-            "sender_id": str(msg.sender_id),
-            "display_name": display_name,
-            "username": username,
-            "show_username_suffix": show_suffix,
-            "profile_photo": profile_photo,
-            "status_emoji": status_emoji,
-            "content": msg.content,
-            "created_at": iso_time,
-            "edited": msg.edited_at is not None,
-            "reactions": json_safe(msg.reactions),
-            "replies": json_safe(msg.replies),
-        })
-
-    return {"messages": response_messages}
+    return {"messages": messages}
 
 
 
