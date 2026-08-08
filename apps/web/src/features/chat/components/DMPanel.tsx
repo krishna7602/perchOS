@@ -47,15 +47,14 @@ export function DMPanel({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/40 backdrop-blur-xs z-50 flex flex-col justify-end animate-fade-in">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4 animate-fade-in">
       <div
-        className="w-full max-w-lg mx-auto flex flex-col animate-slide-up"
+        className="w-full max-w-md mx-auto flex flex-col overflow-hidden rounded-3xl shadow-2xl animate-scale-up"
         style={{
-          maxHeight: "calc(80vh - 64px)",
+          height: "480px",
+          maxHeight: "75vh",
           background: "var(--color-surface)",
-          borderRadius: "var(--radius-lg) var(--radius-lg) 0 0",
-          boxShadow: "0 -8px 32px rgba(58, 46, 39, 0.25)",
-          borderTop: "1px solid var(--color-border)",
+          border: "1px solid var(--color-border)",
         }}
       >
         {/* Header */}
@@ -131,9 +130,9 @@ export function DMPanel({
           <div ref={messagesEndRef} />
         </div>
 
-        {/* Always render input bar when DM panel is open */}
+        {/* Input composer bar — inside centered modal */}
         <div
-          className="flex items-center gap-2 px-4 py-3 shrink-0"
+          className="flex items-center gap-2 px-4 py-3 shrink-0 bg-white/50"
           style={{ borderTop: "1px solid var(--color-border)" }}
         >
           <input
