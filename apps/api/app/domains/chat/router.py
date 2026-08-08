@@ -348,6 +348,11 @@ async def get_venue_polls(
 ):
     """Get all active polls for a venue."""
     from app.domains.networking.models import VenuePoll
+    if not customer.current_venue_id or str(customer.current_venue_id) != venue_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="must_be_checked_in_to_view_polls",
+        )
     try:
         v_id = PydanticObjectId(venue_id)
     except Exception:
@@ -401,6 +406,12 @@ async def create_venue_poll(
     from app.domains.networking.models import VenuePoll, PollOption
     import uuid
 
+    if not customer.current_venue_id or str(customer.current_venue_id) != venue_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="must_be_checked_in_to_create_polls",
+        )
+
     if not payload.question.strip() or len(payload.options) < 2:
         raise HTTPException(status_code=400, detail="poll_requires_question_and_2_options")
 
@@ -436,6 +447,12 @@ async def vote_venue_poll(
 ):
     """Vote for an option in a poll."""
     from app.domains.networking.models import VenuePoll
+
+    if not customer.current_venue_id or str(customer.current_venue_id) != venue_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="must_be_checked_in_to_vote",
+        )
 
     try:
         p_id = PydanticObjectId(poll_id)
