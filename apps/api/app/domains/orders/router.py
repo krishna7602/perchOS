@@ -147,7 +147,7 @@ async def create_order(payload: CreateOrderRequest):
     )
     await order.insert()
 
-    result = await gateway.charge(str(order.id), order.total, key_id, key_secret)
+    result = await gateway.charge(str(order.id), order.total, key_id=key_id, key_secret=key_secret)
     
     payment = Payment(
         order_id=order.id,
