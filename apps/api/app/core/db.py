@@ -9,7 +9,13 @@ client: AsyncIOMotorClient = None  # type: ignore
 async def init_db():
     """Initialize Motor client and Beanie ODM with all document models."""
     global client
-    client = AsyncIOMotorClient(settings.MONGO_URI)
+    client = AsyncIOMotorClient(
+        settings.MONGO_URI,
+        maxPoolSize=100,
+        minPoolSize=10,
+        maxIdleTimeMS=45000,
+        waitQueueTimeoutMS=5000,
+    )
     db = client.get_default_database()
 
     # Import all document models here to register them with Beanie

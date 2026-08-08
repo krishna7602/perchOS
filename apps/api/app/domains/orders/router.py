@@ -87,14 +87,14 @@ async def dispatch_paid_order(order: Order):
 
 async def get_next_sequence(branch_id: str, sequence_name: str) -> int:
     from app.domains.orders.models import Counter
-    counter = await Counter.find_one({"branch_id": branch_id, "sequence_name": sequence_name})
-    if not counter:
-        counter = Counter(branch_id=branch_id, sequence_name=sequence_name, sequence_value=1)
-        await counter.insert()
-        return 1
-    counter.sequence_value += 1
-    await counter.save()
-    return counter.sequence_value
+    from pymongo import ReturnDocument
+    result = await Counter.get_motor_collection().find_one_and_update(
+        {"branch_id": branch_id, "sequence_name": sequence_name},
+        {"$inc": {"sequence_value": 1}},
+        upsert=True,
+        return_document=ReturnDocument.AFTER,
+    )
+    return result["sequence_value"]
 
 
 def generate_acronym(text: str) -> str:

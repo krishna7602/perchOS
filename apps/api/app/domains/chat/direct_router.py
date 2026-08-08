@@ -93,17 +93,20 @@ async def send_direct_message(
     recipient_id = connection.user_b if connection.user_a == customer.id else connection.user_a
     recipient = await CustomerProfile.get(recipient_id)
     if recipient and recipient.display_name:
-        from app.domains.chat.manager import chat_manager
-        await chat_manager.push_event(
-            recipient.display_name,
-            "new_message",
-            {
-                "conversation_id": str(connection_id),
-                "sender_id": str(customer.id),
-                "sender_name": customer.display_name,
-                "content": payload.content.strip()
-            }
-        )
+        try:
+            from app.domains.chat.manager import chat_manager
+            await chat_manager.push_event(
+                recipient.display_name,
+                "new_message",
+                {
+                    "conversation_id": str(connection_id),
+                    "sender_id": str(customer.id),
+                    "sender_name": customer.display_name,
+                    "content": payload.content.strip()
+                }
+            )
+        except Exception:
+            pass
 
     return {
         "id": str(msg.id),
