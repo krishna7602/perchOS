@@ -20,7 +20,9 @@ async def publish_message(room_id: str, message_data: dict) -> dict:
             serialized = json.dumps(message_data)
             await redis.zadd(key, {serialized: score})
             await redis.publish(f"channel:{room_id}", serialized)
-            # Auto-prune messages older than 30 minutes (1800s)
+            # Set key auto-expiration (2 hours) so abandoned room keys automatically clean up
+            await redis.expire(key, 7200)
+            # Prune messages older than 30 minutes (1800s) on write only
             cutoff = score - (30 * 60)
             await redis.zremrangebyscore(key, "-inf", cutoff)
         except Exception:
@@ -30,7 +32,7 @@ async def publish_message(room_id: str, message_data: dict) -> dict:
 
 
 async def get_recent_messages(room_id: str, window_minutes: int = 30) -> list[dict]:
-    """Get messages within 30-minute retention window from Redis sorted set."""
+    """Get messages within 30-minute retention window from Redis (Pure Read, 0 Write commands)."""
     redis = get_redis()
     if not redis:
         return []
@@ -39,9 +41,7 @@ async def get_recent_messages(room_id: str, window_minutes: int = 30) -> list[di
     cutoff = now - (window_minutes * 60)
     key = _room_key(room_id)
     try:
-        # First prune any items older than 30 mins
-        await redis.zremrangebyscore(key, "-inf", cutoff)
-        # Fetch remaining active items
+        # Pure READ query: zrangebyscore automatically filters out scores < cutoff without issuing write commands
         raw_items = await redis.zrangebyscore(key, cutoff, "+inf")
         messages = []
         for item in raw_items:
