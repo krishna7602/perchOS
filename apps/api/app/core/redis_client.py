@@ -8,8 +8,12 @@ redis_client: aioredis.Redis = None  # type: ignore
 async def init_redis() -> aioredis.Redis:
     """Create and return an async Redis connection."""
     global redis_client
+    url = settings.REDIS_URL
+    if "upstash.io" in url and url.startswith("redis://"):
+        url = url.replace("redis://", "rediss://", 1)
+
     redis_client = aioredis.from_url(
-        settings.REDIS_URL,
+        url,
         decode_responses=True,
     )
     return redis_client

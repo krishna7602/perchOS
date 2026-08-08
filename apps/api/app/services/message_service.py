@@ -23,8 +23,11 @@ async def publish_message(room_id: str, sender_handle: str, body: str):
         "created_at": datetime.utcnow().isoformat(),
     }
     score = time.time()
-    await redis.zadd(_room_key(room_id), {json.dumps(message): score})
-    await redis.publish(f"channel:{room_id}", json.dumps(message))
+    try:
+        await redis.zadd(_room_key(room_id), {json.dumps(message): score})
+        await redis.publish(f"channel:{room_id}", json.dumps(message))
+    except Exception:
+        pass
     return message
 
 
@@ -35,8 +38,11 @@ async def get_recent_messages(room_id: str, window_hours: int = 3):
         return []
 
     cutoff = time.time() - (window_hours * 3600)
-    raw = await redis.zrangebyscore(_room_key(room_id), cutoff, "+inf")
-    return [json.loads(r) for r in raw]
+    try:
+        raw = await redis.zrangebyscore(_room_key(room_id), cutoff, "+inf")
+        return [json.loads(r) for r in raw]
+    except Exception:
+        return []
 
 
 async def prune_expired_messages(room_id: str, window_hours: int = 3):
@@ -46,4 +52,7 @@ async def prune_expired_messages(room_id: str, window_hours: int = 3):
         return
 
     cutoff = time.time() - (window_hours * 3600)
-    await redis.zremrangebyscore(_room_key(room_id), "-inf", cutoff)
+    try:
+        await redis.zremrangebyscore(_room_key(room_id), "-inf", cutoff)
+    except Exception:
+        pass

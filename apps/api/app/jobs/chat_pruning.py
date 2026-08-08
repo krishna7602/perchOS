@@ -9,14 +9,18 @@ async def prune_all_rooms_loop():
         try:
             redis = get_redis()
             if redis:
-                room_keys = await redis.keys("room:*:messages")
-                for key in room_keys:
-                    key_str = key.decode() if isinstance(key, bytes) else key
-                    parts = key_str.split(":")
-                    if len(parts) >= 2:
-                        room_id = parts[1]
-                        await prune_expired_messages(room_id)
-        except Exception as e:
-            print(f"Error pruning chat messages: {e}")
+                try:
+                    room_keys = await redis.keys("room:*:messages")
+                    for key in room_keys:
+                        key_str = key.decode() if isinstance(key, bytes) else key
+                        parts = key_str.split(":")
+                        if len(parts) >= 2:
+                            room_id = parts[1]
+                            await prune_expired_messages(room_id)
+                except Exception:
+                    # Catch local Redis connection error silently if Redis is offline
+                    pass
+        except Exception:
+            pass
 
         await asyncio.sleep(300)  # run every 5 minutes
