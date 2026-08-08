@@ -227,7 +227,7 @@ export default function CartPage() {
                 border: "1px solid var(--color-border)",
               }}
             >
-              <PaymentMethodPicker selected={paymentMethod} onChange={setPaymentMethod} />
+              <PaymentMethodPicker selected={paymentMethod} onChange={setPaymentMethod} venueId={cart.venueId || undefined} />
             </div>
 
             {/* Error */}

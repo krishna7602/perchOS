@@ -24,6 +24,8 @@ export function getPaymentSettings(token: string) {
     razorpay_key_id: string;
     razorpay_key_secret: string;
     razorpay_webhook_secret: string;
+    allow_cod?: boolean;
+    allow_online_payment?: boolean;
   }>("/admin/settings/payments", { token });
 }
 
@@ -31,6 +33,8 @@ export function updatePaymentSettings(data: {
   razorpay_key_id?: string;
   razorpay_key_secret?: string;
   razorpay_webhook_secret?: string;
+  allow_cod?: boolean;
+  allow_online_payment?: boolean;
 }, token: string) {
   return apiFetch<{ status: string }>("/admin/settings/payments", {
     method: "PATCH",

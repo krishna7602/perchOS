@@ -1,13 +1,15 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { updateVenue, listVenues } from "@/lib/api";
-import { Button } from "@/components/ui/Button";
-import { ClipboardList, Save, MapPin, Wifi, Info, Image as ImageIcon, CreditCard } from "lucide-react";
+import { listVenues, updateVenue } from "@/features/venues/api";
 import { getPaymentSettings, updatePaymentSettings } from "@/features/admin/api";
+import { Button } from "@/components/ui/Button";
+import { Store, Wifi, Save, CreditCard, Lock } from "lucide-react";
 
-export default function SettingsPage() {
-  const [venueId, setVenueId] = useState("");
+export default function AdminSettingsPage() {
+  const [venueId, setVenueId] = useState<string | null>(null);
+  const [allowCod, setAllowCod] = useState(true);
+  const [allowOnlinePayment, setAllowOnlinePayment] = useState(true);
   const [formData, setFormData] = useState({
     name: "",
     address: "",
@@ -32,9 +34,11 @@ export default function SettingsPage() {
           const v = data.venues[0] as any;
           setVenueId(v._id || v.id);
           
-          let paymentSettings = { razorpay_key_id: "", razorpay_key_secret: "", razorpay_webhook_secret: "" };
+          let paymentSettings: any = { razorpay_key_id: "", razorpay_key_secret: "", razorpay_webhook_secret: "", allow_cod: true, allow_online_payment: true };
           try {
             paymentSettings = await getPaymentSettings(token);
+            setAllowCod(paymentSettings.allow_cod !== false);
+            setAllowOnlinePayment(paymentSettings.allow_online_payment !== false);
           } catch (e) {
             console.error("Failed to load payment settings", e);
           }
@@ -86,6 +90,8 @@ export default function SettingsPage() {
         razorpay_key_id: formData.razorpay_key_id,
         razorpay_key_secret: formData.razorpay_key_secret,
         razorpay_webhook_secret: formData.razorpay_webhook_secret,
+        allow_cod: allowCod,
+        allow_online_payment: allowOnlinePayment,
       };
       await updatePaymentSettings(paymentPayload, token);
 
@@ -95,80 +101,62 @@ export default function SettingsPage() {
       console.error(err);
     } finally {
       setIsSaving(false);
-      setTimeout(() => setMessage(""), 3000);
     }
   };
 
   if (isLoading) {
     return (
-      <div className="p-8">
-        <div className="animate-pulse flex space-x-4">
-          <div className="flex-1 space-y-4 py-1">
-            <div className="h-4 bg-black/10 rounded w-3/4"></div>
-            <div className="space-y-2">
-              <div className="h-4 bg-black/10 rounded"></div>
-              <div className="h-4 bg-black/10 rounded w-5/6"></div>
-            </div>
-          </div>
-        </div>
+      <div className="flex items-center justify-center min-h-[50vh]">
+        <div className="w-8 h-8 border-4 border-amber-800 border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="p-8 max-w-4xl mx-auto">
-      <div className="flex items-center gap-3 mb-8">
-        <div
-          className="p-3 rounded-2xl"
-          style={{ background: "rgba(139, 94, 60, 0.1)" }}
+    <div className="space-y-6 max-w-4xl mx-auto">
+      <div>
+        <h1
+          className="text-2xl font-bold mb-1"
+          style={{ fontFamily: "var(--font-heading)", color: "var(--color-primary)" }}
         >
-          <ClipboardList size={24} style={{ color: "var(--color-primary)" }} />
-        </div>
-        <div>
-          <h1 className="text-2xl font-bold" style={{ fontFamily: "var(--font-heading)" }}>
-            Cafe Settings
-          </h1>
-          <p className="text-sm" style={{ color: "var(--color-muted)" }}>
-            Update your public profile, location, and guest WiFi.
-          </p>
-        </div>
+          Venue Settings
+        </h1>
+        <p className="text-sm" style={{ color: "var(--color-muted)" }}>
+          Manage your venue details, guest Wi-Fi credentials, and payment options.
+        </p>
       </div>
 
       <form onSubmit={handleSave} className="space-y-6">
-        {/* Basic Info */}
+        {/* Profile */}
         <div className="p-6 rounded-2xl" style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}>
           <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
-            <Info size={18} /> Basic Information
+            <Store size={18} /> Basic Information
           </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-4">
             <div>
-              <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--color-text)" }}>Cafe Name</label>
+              <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--color-text)" }}>Venue Name</label>
               <input
                 type="text"
                 name="name"
                 value={formData.name}
                 onChange={handleChange}
+                required
                 className="w-full px-4 py-2.5 rounded-xl text-sm outline-none transition-all"
                 style={{ background: "var(--color-bg)", border: "1.5px solid var(--color-border)", color: "var(--color-text)" }}
-                required
               />
             </div>
             <div>
-              <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--color-text)" }}>Logo URL</label>
-              <div className="relative">
-                <ImageIcon size={16} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: "var(--color-muted)" }} />
-                <input
-                  type="url"
-                  name="logo_url"
-                  value={formData.logo_url}
-                  onChange={handleChange}
-                  placeholder="https://example.com/logo.png"
-                  className="w-full pl-10 pr-4 py-2.5 rounded-xl text-sm outline-none transition-all"
-                  style={{ background: "var(--color-bg)", border: "1.5px solid var(--color-border)", color: "var(--color-text)" }}
-                />
-              </div>
+              <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--color-text)" }}>Address</label>
+              <input
+                type="text"
+                name="address"
+                value={formData.address}
+                onChange={handleChange}
+                className="w-full px-4 py-2.5 rounded-xl text-sm outline-none transition-all"
+                style={{ background: "var(--color-bg)", border: "1.5px solid var(--color-border)", color: "var(--color-text)" }}
+              />
             </div>
-            <div className="md:col-span-2">
+            <div>
               <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--color-text)" }}>Description</label>
               <textarea
                 name="description"
@@ -177,38 +165,30 @@ export default function SettingsPage() {
                 rows={3}
                 className="w-full px-4 py-2.5 rounded-xl text-sm outline-none transition-all resize-none"
                 style={{ background: "var(--color-bg)", border: "1.5px solid var(--color-border)", color: "var(--color-text)" }}
-                placeholder="Welcome to our cozy cafe..."
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--color-text)" }}>Logo URL</label>
+              <input
+                type="url"
+                name="logo_url"
+                value={formData.logo_url}
+                onChange={handleChange}
+                placeholder="https://example.com/logo.png"
+                className="w-full px-4 py-2.5 rounded-xl text-sm outline-none transition-all"
+                style={{ background: "var(--color-bg)", border: "1.5px solid var(--color-border)", color: "var(--color-text)" }}
               />
             </div>
           </div>
         </div>
 
-        {/* Location */}
+        {/* Guest WiFi */}
         <div className="p-6 rounded-2xl" style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}>
           <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
-            <MapPin size={18} /> Location
-          </h2>
-          <div>
-            <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--color-text)" }}>Address</label>
-            <input
-              type="text"
-              name="address"
-              value={formData.address}
-              onChange={handleChange}
-              placeholder="123 Coffee St, New York, NY"
-              className="w-full px-4 py-2.5 rounded-xl text-sm outline-none transition-all"
-              style={{ background: "var(--color-bg)", border: "1.5px solid var(--color-border)", color: "var(--color-text)" }}
-            />
-          </div>
-        </div>
-
-        {/* WiFi */}
-        <div className="p-6 rounded-2xl" style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}>
-          <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
-            <Wifi size={18} /> Guest WiFi
+            <Wifi size={18} /> Guest Wi-Fi Credentials
           </h2>
           <p className="text-xs mb-4" style={{ color: "var(--color-muted)" }}>
-            Automatically connect your guests to the internet when they scan the table QR code.
+            Checked-in guests can access Wi-Fi details safely. Password is encrypted (AES-256).
           </p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
@@ -218,19 +198,19 @@ export default function SettingsPage() {
                 name="wifi_ssid"
                 value={formData.wifi_ssid}
                 onChange={handleChange}
-                placeholder="Cafe_Guest_Wifi"
+                placeholder="CafeGuest_5G"
                 className="w-full px-4 py-2.5 rounded-xl text-sm outline-none transition-all"
                 style={{ background: "var(--color-bg)", border: "1.5px solid var(--color-border)", color: "var(--color-text)" }}
               />
             </div>
             <div>
-              <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--color-text)" }}>Password</label>
+              <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--color-text)" }}>Wi-Fi Password</label>
               <input
                 type="password"
                 name="wifi_password"
                 value={formData.wifi_password}
                 onChange={handleChange}
-                placeholder="Leave blank if no password"
+                placeholder="Leave blank if unchanged"
                 className="w-full px-4 py-2.5 rounded-xl text-sm outline-none transition-all"
                 style={{ background: "var(--color-bg)", border: "1.5px solid var(--color-border)", color: "var(--color-text)" }}
               />
@@ -240,12 +220,61 @@ export default function SettingsPage() {
 
         {/* Payments */}
         <div className="p-6 rounded-2xl" style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}>
-          <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
-            <CreditCard size={18} /> Payment Configuration
+          <h2 className="text-lg font-bold mb-2 flex items-center gap-2">
+            <CreditCard size={18} /> Payment Options & Gateway Configuration
           </h2>
-          <p className="text-xs mb-4" style={{ color: "var(--color-muted)" }}>
-            Connect your Razorpay account to accept UPI and Card payments. Money goes directly to your account.
+          <p className="text-xs mb-6" style={{ color: "var(--color-muted)" }}>
+            Toggle payment methods available to customers at checkout, or configure Razorpay credentials.
           </p>
+
+          {/* Payment Method Toggles */}
+          <div className="mb-6 p-4 rounded-xl bg-amber-500/5 border border-amber-900/10 space-y-4">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-amber-900">Active Customer Payment Options</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {/* Cash on Delivery Toggle */}
+              <div className="flex items-center justify-between p-3.5 rounded-xl bg-white border border-gray-200 shadow-xs">
+                <div>
+                  <p className="text-sm font-bold text-gray-900">💵 Cash on Delivery (COD)</p>
+                  <p className="text-xs text-gray-500">Allow patrons to pay in cash to staff</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setAllowCod(!allowCod)}
+                  className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                    allowCod ? "bg-amber-800" : "bg-gray-300"
+                  }`}
+                >
+                  <span
+                    className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out ${
+                      allowCod ? "translate-x-5" : "translate-x-0"
+                    }`}
+                  />
+                </button>
+              </div>
+
+              {/* Online Payment Toggle */}
+              <div className="flex items-center justify-between p-3.5 rounded-xl bg-white border border-gray-200 shadow-xs">
+                <div>
+                  <p className="text-sm font-bold text-gray-900">💳 Online Payment (Razorpay)</p>
+                  <p className="text-xs text-gray-500">Allow UPI, Cards, and Net Banking</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setAllowOnlinePayment(!allowOnlinePayment)}
+                  className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                    allowOnlinePayment ? "bg-amber-800" : "bg-gray-300"
+                  }`}
+                >
+                  <span
+                    className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out ${
+                      allowOnlinePayment ? "translate-x-5" : "translate-x-0"
+                    }`}
+                  />
+                </button>
+              </div>
+            </div>
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="md:col-span-2">
               <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--color-text)" }}>Razorpay Key ID</label>

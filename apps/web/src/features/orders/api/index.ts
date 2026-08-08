@@ -73,8 +73,9 @@ export function assignWaiter(orderId: string, token: string) {
   });
 }
 
-export function getPaymentMethods() {
-  return apiFetch<{ id: string; label: string; description: string }[]>("/config/payment-methods");
+export function getPaymentMethods(venueId?: string) {
+  const query = venueId ? `?venue_id=${encodeURIComponent(venueId)}` : "";
+  return apiFetch<{ id: string; label: string; description: string; enabled?: boolean }[]>(`/config/payment-methods${query}`);
 }
 
 export function markCashCollected(orderId: string, token: string) {

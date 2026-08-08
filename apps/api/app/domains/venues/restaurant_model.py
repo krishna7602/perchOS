@@ -12,6 +12,8 @@ class Restaurant(Document):
     razorpay_key_secret: str | None = None
     razorpay_webhook_secret: str | None = None
     gst_number: str | None = None
+    allow_cod: bool = True
+    allow_online_payment: bool = True
 
     class Settings:
         name = "restaurants"

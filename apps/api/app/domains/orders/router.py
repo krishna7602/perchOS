@@ -14,9 +14,37 @@ require_kitchen = RequireRole([Role.OWNER, Role.MANAGER, Role.CHEF])
 
 
 @router.get("/config/payment-methods")
-async def get_payment_methods():
-    """Get available payment methods based on environment configuration."""
-    return get_payment_methods_info()
+async def get_payment_methods(venue_id: str | None = None):
+    """Get available payment methods based on environment configuration and venue toggles."""
+    allow_cod = True
+    allow_online = True
+    
+    if venue_id:
+        try:
+            branch = await Branch.get(PydanticObjectId(venue_id))
+            if branch and branch.restaurant_id:
+                from app.domains.venues.restaurant_model import Restaurant
+                rest = await Restaurant.get(branch.restaurant_id)
+                if rest:
+                    allow_cod = getattr(rest, "allow_cod", True)
+                    allow_online = getattr(rest, "allow_online_payment", True)
+        except Exception:
+            pass
+
+    methods = get_payment_methods_info()
+    response = []
+    for m in methods:
+        is_enabled = True
+        if m["id"] == "cod":
+            is_enabled = allow_cod
+        elif m["id"] in ["razorpay", "dummy_card"]:
+            is_enabled = allow_online
+            
+        m_copy = dict(m)
+        m_copy["enabled"] = is_enabled
+        response.append(m_copy)
+
+    return response
 
 
 VALID_STATUSES = {"received", "preparing", "ready", "served"}

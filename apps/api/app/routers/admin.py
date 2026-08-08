@@ -94,6 +94,8 @@ class PaymentSettingsUpdate(BaseModel):
     razorpay_key_id: str | None = None
     razorpay_key_secret: str | None = None
     razorpay_webhook_secret: str | None = None
+    allow_cod: bool | None = None
+    allow_online_payment: bool | None = None
 
 
 @router.get("/settings/payments")
@@ -109,13 +111,15 @@ async def get_payment_settings(user: User = Depends(require_management)):
     return {
         "razorpay_key_id": restaurant.razorpay_key_id or "",
         "razorpay_key_secret": restaurant.razorpay_key_secret or "",
-        "razorpay_webhook_secret": restaurant.razorpay_webhook_secret or ""
+        "razorpay_webhook_secret": restaurant.razorpay_webhook_secret or "",
+        "allow_cod": getattr(restaurant, "allow_cod", True),
+        "allow_online_payment": getattr(restaurant, "allow_online_payment", True),
     }
 
 
 @router.patch("/settings/payments")
 async def update_payment_settings(payload: PaymentSettingsUpdate, user: User = Depends(require_management)):
-    """Update the restaurant's Razorpay configuration."""
+    """Update the restaurant's Razorpay and payment configuration."""
     if not user.restaurant_id:
         return {"error": "no_restaurant"}
         
@@ -131,6 +135,10 @@ async def update_payment_settings(payload: PaymentSettingsUpdate, user: User = D
     if payload.razorpay_webhook_secret is not None:
         if payload.razorpay_webhook_secret != "********":
             restaurant.razorpay_webhook_secret = payload.razorpay_webhook_secret
+    if payload.allow_cod is not None:
+        restaurant.allow_cod = payload.allow_cod
+    if payload.allow_online_payment is not None:
+        restaurant.allow_online_payment = payload.allow_online_payment
         
     await restaurant.save()
     return {"status": "success"}
