@@ -28,9 +28,8 @@ export default function GuestVenueLayout({
   }, [pathname, clearUnread]);
 
   const tabs = [
-    { name: "Chat", path: `/venue/${venueId}/chat`, icon: MessageSquare },
-    { name: "Polls", path: `/venue/${venueId}/polls`, icon: Vote },
     { name: "Menu", path: `/venue/${venueId}/menu`, icon: UtensilsCrossed },
+    { name: "Chat", path: `/venue/${venueId}/chat`, icon: MessageSquare },
     { name: "Orders", path: `/venue/${venueId}/orders`, icon: ClipboardList },
   ];
 

@@ -957,19 +957,31 @@ export function ChatRoom({
           borderTop: "1px solid var(--color-border)",
         }}
       >
-        {/* Quick Emojis strip */}
-        <div className="flex items-center gap-1.5 overflow-x-auto py-0.5" style={{ scrollbarWidth: "none" }}>
-          {["👋", "☕", "🍕", "🔥", "❤️", "👍", "🎉", "😄"].map((emoji) => (
-            <button
-              key={emoji}
-              onClick={() => setInput((prev) => prev + emoji)}
-              className="px-2 py-1 rounded-lg text-xs hover:bg-amber-500/10 transition-transform active:scale-90 cursor-pointer border border-transparent hover:border-amber-500/20"
-              title={`Add ${emoji}`}
-            >
-              {emoji}
-            </button>
-          ))}
+        {/* Quick Emojis strip & Poll button */}
+        <div className="flex items-center justify-between overflow-x-auto py-0.5 gap-2" style={{ scrollbarWidth: "none" }}>
+          <div className="flex items-center gap-1.5">
+            {["👋", "☕", "🍕", "🔥", "❤️", "👍", "🎉", "😄"].map((emoji) => (
+              <button
+                key={emoji}
+                onClick={() => setInput((prev) => prev + emoji)}
+                className="px-2 py-1 rounded-lg text-xs hover:bg-amber-500/10 transition-transform active:scale-90 cursor-pointer border border-transparent hover:border-amber-500/20"
+                title={`Add ${emoji}`}
+              >
+                {emoji}
+              </button>
+            ))}
+          </div>
+
+          <button
+            onClick={() => setShowCreatePoll(true)}
+            className="flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-bold bg-amber-500/10 hover:bg-amber-500/20 text-amber-900 border border-amber-500/20 transition-all cursor-pointer shrink-0"
+            title="Create a Poll"
+          >
+            <BarChart2 size={13} />
+            <span>Poll</span>
+          </button>
         </div>
+
 
         <div className="flex items-center gap-2">
           <input
