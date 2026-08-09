@@ -160,9 +160,12 @@ export default function AdminLayout({
             {role === "super_admin" ? "Perch HQ" : restaurantName}
           </span>
         </div>
-        <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="p-2 -mr-2">
-          <Menu size={24} style={{ color: "var(--color-text)" }} />
-        </button>
+        <div className="flex items-center gap-3">
+          <NotificationCenter venueId={venueId} />
+          <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="p-2 -mr-2 text-stone-800">
+            <Menu size={24} />
+          </button>
+        </div>
       </div>
 
       {/* Mobile Sidebar Overlay */}
