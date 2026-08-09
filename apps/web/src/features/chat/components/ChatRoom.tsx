@@ -4,6 +4,8 @@ import { useState, useRef, useEffect } from "react";
 import { OnlineUsersBar } from "./OnlineUsersBar";
 import { DMPanel } from "./DMPanel";
 import { PollMessageCard } from "./PollMessageCard";
+import { WaveRequestToast } from "@/components/notifications/WaveRequestToast";
+import { NotificationCenter } from "@/components/notifications/NotificationCenter";
 import { Send, LogOut, UtensilsCrossed, X, Star, Link as LinkIcon, Compass, Sparkles, MessageSquare, Vote, Plus, Check, BarChart2, CheckCircle2, ChevronLeft } from "lucide-react";
 import Link from "next/link";
 import { 
@@ -563,14 +565,17 @@ export function ChatRoom({
           </div>
         </div>
 
-        {/* User Google Profile Badge */}
-        <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/80 border border-amber-900/10 shadow-xs hover:border-amber-500/30 transition-all">
-          <img 
-            src={profilePhoto || `https://api.dicebear.com/7.x/fun-emoji/svg?seed=${encodeURIComponent(handle || "user")}`} 
-            alt={handle || ""} 
-            className="w-6 h-6 rounded-full object-cover border border-amber-500/40 bg-amber-50" 
-          />
-          <span className="text-xs font-bold text-gray-800 leading-tight">{handle}</span>
+        {/* User Profile Badge & Notification Center */}
+        <div className="flex items-center gap-2">
+          <NotificationCenter venueId={venueId} />
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/80 border border-amber-900/10 shadow-xs hover:border-amber-500/30 transition-all">
+            <img 
+              src={profilePhoto || `https://api.dicebear.com/7.x/fun-emoji/svg?seed=${encodeURIComponent(handle || "user")}`} 
+              alt={handle || ""} 
+              className="w-6 h-6 rounded-full object-cover border border-amber-500/40 bg-amber-50" 
+            />
+            <span className="text-xs font-bold text-gray-800 leading-tight">{handle}</span>
+          </div>
         </div>
       </div>
 

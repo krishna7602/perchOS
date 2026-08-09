@@ -47,6 +47,7 @@ const navItems = [
 
 import { useChatNotifier } from "@/hooks/useChatNotifier";
 import { GlobalOrderNotifier } from "@/components/GlobalOrderNotifier";
+import { NotificationCenter } from "@/components/notifications/NotificationCenter";
 
 export default function AdminLayout({
   children,
@@ -245,8 +246,9 @@ export default function AdminLayout({
           style={{ borderTop: "1px solid var(--color-border)" }}
         >
           <div className="flex items-center gap-3 mb-3">
+            <NotificationCenter venueId={venueId} />
             <div
-              className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold shrink-0"
+              className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold shrink-0 shadow-xs"
               style={{ background: "var(--color-primary)", color: "white" }}
             >
               {adminName.charAt(0).toUpperCase()}
