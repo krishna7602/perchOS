@@ -41,6 +41,7 @@ const navItems = [
   { href: "/admin/moderation", label: "Moderation", icon: Shield },
   { href: "/admin/settings", label: "Settings", icon: ClipboardList },
   { href: "/admin/chef", label: "Chef Portal", icon: UtensilsCrossed },
+  { href: "/admin/waiter", label: "Waiter Portal", icon: Coffee },
   { href: "/admin/superadmin/cafes", label: "Super Admin", icon: Shield },
 ];
 
@@ -212,10 +213,9 @@ export default function AdminLayout({
           {navItems.map(({ href, label, icon: Icon, exact }) => {
             // Role-based visibility
             if (role === "chef" && !["Dashboard", "Team Chat", "Chef Portal"].includes(label)) return null;
-            if (role === "waiter" && !["Team Chat"].includes(label)) return null;
+            if (role === "waiter" && !["Dashboard", "Team Chat", "Waiter Portal"].includes(label)) return null;
             if (role === "super_admin" && !["Dashboard", "Super Admin"].includes(label)) return null;
             if (role !== "super_admin" && label === "Super Admin") return null;
-            if (["owner", "manager", "super_admin"].includes(role) && label === "Chef Portal") return null;
             if (["chef", "waiter"].includes(role) && label === "Staff Analytics") return null;
 
             const isActive = exact ? pathname === href : pathname.startsWith(href);
