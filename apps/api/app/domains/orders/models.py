@@ -39,6 +39,7 @@ class Order(Document):
     # Workflow
     assigned_chef_id: PydanticObjectId | None = None
     assigned_waiter_id: PydanticObjectId | None = None
+    assigned_waiter_name: str | None = None
     rejected_by: list[PydanticObjectId] = Field(default_factory=list)
     waiter_rejected_by: list[PydanticObjectId] = Field(default_factory=list)
     pickup_status: str = "pending"  # pending | accepted | rejected | completed
@@ -46,6 +47,27 @@ class Order(Document):
 
     class Settings:
         name = "orders"
+
+
+class OrderEvent(Document):
+    """Audit log event tracking every order lifecycle action."""
+
+    restaurant_id: PydanticObjectId
+    branch_id: PydanticObjectId
+    order_id: PydanticObjectId
+    order_token: str
+    table_number: str | None = None
+    event_type: str  # ORDER_CREATED | CHEF_ACCEPTED | ORDER_READY | WAITER_PICKUP_ACCEPTED | WAITER_PICKUP_REJECTED | CASH_CONFIRMED_SERVED | CUSTOMER_SELF_PICKUP
+    title: str
+    description: str
+    performed_by_id: PydanticObjectId | None = None
+    performed_by_name: str | None = None
+    performed_by_role: str | None = None
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+    class Settings:
+        name = "order_events"
+        indexes = ["branch_id", "order_id", "created_at"]
 
 
 class Payment(Document):

@@ -235,18 +235,34 @@ export default function OrderPage() {
             </div>
           </div>
 
-          {/* Self Pickup Button */}
-          {currentStatus === "ready" && !(order as any).has_waiters && (
-            <div className="mb-6 print:hidden">
-              <button
-                onClick={handleSelfPickup}
-                disabled={isPickingUp}
-                className="w-full py-4 rounded-xl font-bold text-white transition-all shadow-md hover:scale-[1.01] active:scale-[0.99] flex items-center justify-center gap-2 disabled:opacity-50 disabled:pointer-events-none animate-bounce"
-                style={{ background: "var(--color-primary)" }}
-              >
-                <CheckCircle size={18} /> {isPickingUp ? "Completing..." : "I've Picked Up My Order"}
-              </button>
-            </div>
+          {/* Waiter Delivery Status Banner & Self Pickup Control */}
+          {currentStatus === "ready" && (
+            (order as any).has_waiters ? (
+              <div className="mb-6 bg-amber-50 border-2 border-amber-300 rounded-2xl p-4 text-center print:hidden space-y-1 shadow-sm">
+                <p className="text-sm font-extrabold text-amber-950 flex items-center justify-center gap-2">
+                  <span className="text-lg">🛎️</span>
+                  {(order as any).assigned_waiter_name 
+                    ? `Waiter ${(order as any).assigned_waiter_name} accepted pickup & is delivering to Table ${(order as any).table_number || 'your table'}!` 
+                    : `Your order is ready! A waiter is picking up your food for Table ${(order as any).table_number || 'your table'}.`}
+                </p>
+                <p className="text-xs text-amber-800 font-medium">
+                  {(order as any).payment_method === "cod" && (order as any).payment_status !== "paid"
+                    ? "Please pay cash to your waiter upon delivery. Your waiter will confirm payment & complete your order." 
+                    : "Your waiter will serve your food directly to your table."}
+                </p>
+              </div>
+            ) : (
+              <div className="mb-6 print:hidden">
+                <button
+                  onClick={handleSelfPickup}
+                  disabled={isPickingUp}
+                  className="w-full py-4 rounded-xl font-bold text-white transition-all shadow-md hover:scale-[1.01] active:scale-[0.99] flex items-center justify-center gap-2 disabled:opacity-50 disabled:pointer-events-none animate-bounce cursor-pointer"
+                  style={{ background: "var(--color-primary)" }}
+                >
+                  <CheckCircle size={18} /> {isPickingUp ? "Completing..." : "I've Picked Up My Order"}
+                </button>
+              </div>
+            )
           )}
 
           {/* Industry Standard Tax Invoice Card (Visible on Web & Print) */}

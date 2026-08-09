@@ -103,3 +103,14 @@ export function markCashCollected(orderId: string, token: string) {
   });
 }
 
+export function confirmCashAndServe(orderId: string, token: string) {
+  return apiFetch<{ status: string; order: Record<string, unknown> }>(`/admin/orders/${orderId}/cash-confirm-served`, {
+    method: "POST",
+    token,
+  });
+}
+
+export function getOrderEvents(venueId: string, token: string) {
+  return apiFetch<{ events: Record<string, unknown>[] }>(`/admin/orders/${venueId}/events`, { token });
+}
+

@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Header, Query
 from beanie import PydanticObjectId
 import secrets
 
-from app.domains.orders.models import Order, OrderLine, Payment
+from app.domains.orders.models import Order, OrderLine, Payment, OrderEvent
 from app.domains.venues.branch_model import Branch
 from app.domains.auth.models import User, Role, StaffStatus
 from app.services.payments.registry import get_available_gateways, get_payment_methods_info
@@ -13,6 +13,48 @@ import re
 
 router = APIRouter(tags=["orders"])
 require_kitchen = RequireRole([Role.OWNER, Role.MANAGER, Role.CHEF])
+
+
+async def log_and_broadcast_event(
+    order: Order,
+    event_type: str,
+    title: str,
+    description: str,
+    performed_by: User | None = None
+):
+    """Log an event to the order_events collection and broadcast real-time event to managers."""
+    event = OrderEvent(
+        restaurant_id=order.restaurant_id,
+        branch_id=order.branch_id,
+        order_id=order.id,
+        order_token=order.order_token or str(order.id),
+        table_number=order.table_number,
+        event_type=event_type,
+        title=title,
+        description=description,
+        performed_by_id=performed_by.id if performed_by else None,
+        performed_by_name=performed_by.name if performed_by else None,
+        performed_by_role=performed_by.role if performed_by else None,
+    )
+    await event.insert()
+
+    from app.domains.chat.manager import chat_manager
+    from app.domains.notifications.manager import notification_manager
+    import asyncio
+
+    event_payload = {
+        "type": "manager_event_audit",
+        "event": event.model_dump(mode="json")
+    }
+
+    asyncio.create_task(chat_manager.broadcast(str(order.branch_id), event_payload))
+    asyncio.create_task(notification_manager.send_push_to_branch_role(str(order.branch_id), "manager", {
+        "type": "manager_event_audit",
+        "title": title,
+        "message": description,
+        "order_token": order.order_token,
+        "table_number": order.table_number or "N/A"
+    }))
 
 
 @router.get("/config/payment-methods")
@@ -179,6 +221,15 @@ async def create_order(payload: CreateOrderRequest):
     if order.payment_status == "paid" or order.payment_method == "cod":
         import asyncio
         asyncio.create_task(dispatch_paid_order(order))
+
+    # Log ORDER_CREATED event
+    import asyncio
+    asyncio.create_task(log_and_broadcast_event(
+        order,
+        event_type="ORDER_CREATED",
+        title=f"New Order #{order.order_token}",
+        description=f"Customer {order.customer_name or order.customer_handle} placed order for Table {order.table_number or 'N/A'} (₹{order.total}, {order.payment_method.upper()})"
+    ))
 
     order_dict = order.model_dump(mode="json")
     order_dict["access_token"] = access_token
@@ -435,6 +486,13 @@ async def update_order_status(
             "type": "system_order",
             "payload": push_payload
         }))
+        asyncio.create_task(log_and_broadcast_event(
+            order,
+            event_type="ORDER_READY",
+            title="Order Ready for Pickup",
+            description=f"Order #{order.order_token} for Table {order.table_number or 'N/A'} is ready for pickup",
+            performed_by=user
+        ))
 
     elif payload.order_status == "served":
         if order.assigned_waiter_id:
@@ -483,6 +541,16 @@ async def accept_order(order_id: str, user: User = Depends(RequireRole([Role.CHE
     # Update chef status
     user.status = StaffStatus.PREPARING
     await user.save()
+
+    # Log CHEF_ACCEPTED event
+    import asyncio
+    asyncio.create_task(log_and_broadcast_event(
+        order,
+        event_type="CHEF_ACCEPTED",
+        title="Preparation Started",
+        description=f"Chef {user.name} started preparing order #{order.order_token} for Table {order.table_number or 'N/A'}",
+        performed_by=user
+    ))
     
     # Trigger Notifications & WebSockets
     from app.domains.notifications.manager import notification_manager
@@ -590,13 +658,26 @@ async def assign_waiter(order_id: str, user: User = Depends(RequireRole([Role.OW
 
 @router.post("/orders/{order_id}/self-pickup")
 async def self_pickup_order(order_id: str):
-    """Customer self-pickups the order, marking it as served."""
+    """Customer self-pickups the order ONLY IF no waiters are present in the venue."""
     order = await Order.get(PydanticObjectId(order_id))
     if not order:
         raise HTTPException(status_code=404, detail="order_not_found")
         
     if order.order_status != "ready":
         raise HTTPException(status_code=400, detail="order_not_ready_for_pickup")
+
+    # Check if active waiters exist at the branch
+    waiters_count = await User.find(
+        User.branch_id == order.branch_id,
+        User.role == Role.WAITER,
+        User.is_active == True
+    ).count()
+
+    if waiters_count > 0:
+        raise HTTPException(
+            status_code=400,
+            detail="waiters_present_must_be_served_by_waiter"
+        )
         
     order.order_status = "served"
     order.payment_status = "paid"
@@ -604,6 +685,14 @@ async def self_pickup_order(order_id: str):
     from datetime import datetime
     order.completed_at = datetime.utcnow()
     await order.save()
+
+    import asyncio
+    asyncio.create_task(log_and_broadcast_event(
+        order,
+        event_type="CUSTOMER_SELF_PICKUP",
+        title="Customer Self-Pickup",
+        description=f"Customer {order.customer_name or order.customer_handle} self-picked up order #{order.order_token} (No waiters present)"
+    ))
     
     return {"status": "success", "order": order.model_dump(mode="json")}
 
@@ -636,6 +725,7 @@ async def waiter_accept_pickup(order_id: str, user: User = Depends(RequireRole([
         {
             "$set": {
                 "assigned_waiter_id": user.id,
+                "assigned_waiter_name": user.name,
                 "pickup_status": "accepted"
             }
         }
@@ -653,10 +743,18 @@ async def waiter_accept_pickup(order_id: str, user: User = Depends(RequireRole([
     user.status = StaffStatus.DELIVERING
     await user.save()
 
+    import asyncio
+    asyncio.create_task(log_and_broadcast_event(
+        order,
+        event_type="WAITER_PICKUP_ACCEPTED",
+        title="Pickup Accepted",
+        description=f"Waiter {user.name} accepted pickup for Table {order.table_number or 'N/A'}",
+        performed_by=user
+    ))
+
     # Trigger Notifications & WebSockets
     from app.domains.notifications.manager import notification_manager
     from app.domains.chat.manager import chat_manager
-    import asyncio
 
     broadcast_payload = {
         "type": "waiter_pickup_accepted",
@@ -706,10 +804,18 @@ async def waiter_reject_pickup(order_id: str, user: User = Depends(RequireRole([
     
     order = await Order.get(oid)
 
+    import asyncio
+    asyncio.create_task(log_and_broadcast_event(
+        order,
+        event_type="WAITER_PICKUP_REJECTED",
+        title="Pickup Rejected",
+        description=f"Waiter {user.name} rejected pickup for Table {order.table_number or 'N/A'}",
+        performed_by=user
+    ))
+
     # Notify manager and staff that a waiter rejected pickup
     from app.domains.notifications.manager import notification_manager
     from app.domains.chat.manager import chat_manager
-    import asyncio
 
     notify_payload = {
         "type": "waiter_pickup_rejected",
@@ -730,4 +836,83 @@ async def waiter_reject_pickup(order_id: str, user: User = Depends(RequireRole([
     asyncio.create_task(notification_manager.send_push_to_branch_role(str(branch.id), "manager", notify_payload))
 
     return {"status": "success", "message": "Pickup rejected."}
+
+
+@router.post("/admin/orders/{order_id}/cash-confirm-served")
+async def confirm_cash_and_serve(order_id: str, user: User = Depends(RequireRole([Role.WAITER, Role.MANAGER, Role.OWNER]))):
+    """Waiters/Managers confirm cash payment received and mark order as served."""
+    oid = PydanticObjectId(order_id)
+    order = await Order.get(oid)
+    if not order:
+        raise HTTPException(status_code=404, detail="order_not_found")
+        
+    branch = await Branch.get(order.branch_id)
+    if not branch or branch.restaurant_id != user.restaurant_id:
+        raise HTTPException(status_code=404, detail="branch_not_found")
+
+    from datetime import datetime
+    order.order_status = "served"
+    order.payment_status = "paid"
+    order.pickup_status = "completed"
+    order.completed_at = datetime.utcnow()
+    if not order.assigned_waiter_id:
+        order.assigned_waiter_id = user.id
+        order.assigned_waiter_name = user.name
+    await order.save()
+
+    user.status = StaffStatus.AVAILABLE
+    await user.save()
+
+    import asyncio
+    asyncio.create_task(log_and_broadcast_event(
+        order,
+        event_type="CASH_CONFIRMED_SERVED",
+        title="Cash Payment Confirmed & Served",
+        description=f"Waiter {user.name} confirmed cash payment of ₹{order.total} & served Table {order.table_number or 'N/A'}",
+        performed_by=user
+    ))
+
+    from app.domains.notifications.manager import notification_manager
+    from app.domains.chat.manager import chat_manager
+
+    push_payload = {
+        "type": "order_served",
+        "order_id": str(order.id),
+        "order_token": order.order_token,
+        "table_number": order.table_number or "N/A",
+        "customer_name": order.customer_name or order.customer_handle,
+        "payment_method": order.payment_method,
+        "total": order.total,
+        "message": f"Order {order.order_token} served by Waiter {user.name}"
+    }
+
+    asyncio.create_task(chat_manager.broadcast(str(branch.id), {
+        "type": "order_status_updated",
+        "order_id": str(order.id),
+        "order_token": order.order_token,
+        "order_status": "served",
+        "order": order.model_dump(mode="json")
+    }))
+
+    if order.customer_handle:
+        asyncio.create_task(chat_manager.unicast(str(branch.id), order.customer_handle, {
+            "type": "system_order",
+            "payload": push_payload
+        }))
+
+    return {"status": "success", "order": order.model_dump(mode="json")}
+
+
+@router.get("/admin/orders/{venue_id}/events")
+async def get_order_events(venue_id: str, user: User = Depends(require_kitchen)):
+    """Get audit logs for a branch (Manager/Owner view)."""
+    branch = await Branch.get(PydanticObjectId(venue_id))
+    if not branch or branch.restaurant_id != user.restaurant_id:
+        raise HTTPException(status_code=404, detail="branch_not_found")
+
+    events = await OrderEvent.find(
+        OrderEvent.branch_id == branch.id
+    ).sort("-created_at").limit(100).to_list()
+
+    return {"events": [e.model_dump(mode="json") for e in events]}
 

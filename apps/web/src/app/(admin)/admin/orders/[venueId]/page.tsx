@@ -2,11 +2,11 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { listVenueOrders, updateOrderStatus } from "@/lib/api";
+import { listVenueOrders, updateOrderStatus, getOrderEvents } from "@/features/orders/api";
 import { ORDER_STATUSES, ORDER_STATUS_LABELS, ORDER_STATUS_EMOJI } from "@/lib/theme";
 import { Button } from "@/components/ui/Button";
 import { Skeleton } from "@/components/ui/Skeleton";
-import { ArrowLeft, ChevronRight, RefreshCw } from "lucide-react";
+import { ArrowLeft, ChevronRight, RefreshCw, Activity, History, Clock } from "lucide-react";
 
 interface OrderData {
   _id: string;
@@ -24,6 +24,17 @@ interface OrderData {
   assigned_waiter_name?: string;
 }
 
+interface AuditEvent {
+  id?: string;
+  order_token: string;
+  table_number?: string;
+  event_type: string;
+  title: string;
+  description: string;
+  performed_by_name?: string;
+  created_at: string;
+}
+
 export default function OrdersKanbanPage() {
   const params = useParams();
   const router = useRouter();
@@ -31,6 +42,8 @@ export default function OrdersKanbanPage() {
   const token = typeof window !== "undefined" ? localStorage.getItem("perch_admin_token") || "" : "";
 
   const [orders, setOrders] = useState<OrderData[]>([]);
+  const [events, setEvents] = useState<AuditEvent[]>([]);
+  const [showAuditLog, setShowAuditLog] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
   const fetchOrders = useCallback(async () => {
@@ -42,11 +55,23 @@ export default function OrdersKanbanPage() {
     setIsLoading(false);
   }, [venueId, token]);
 
+  const fetchEvents = useCallback(async () => {
+    if (!token) return;
+    try {
+      const res = await getOrderEvents(venueId, token);
+      setEvents((res.events || []) as unknown as AuditEvent[]);
+    } catch {}
+  }, [venueId, token]);
+
   useEffect(() => {
     fetchOrders();
-    const interval = setInterval(fetchOrders, 10000);
+    fetchEvents();
+    const interval = setInterval(() => {
+      fetchOrders();
+      fetchEvents();
+    }, 5000);
     return () => clearInterval(interval);
-  }, [fetchOrders]);
+  }, [fetchOrders, fetchEvents]);
 
   const handleMarkCashCollected = async (orderId: string) => {
     try {
@@ -102,10 +127,69 @@ export default function OrdersKanbanPage() {
             </p>
           </div>
         </div>
-        <Button variant="secondary" className="px-3 py-1 text-xs" onClick={fetchOrders}>
-          <RefreshCw size={14} className="mr-1" /> Refresh
-        </Button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowAuditLog(!showAuditLog)}
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer border ${
+              showAuditLog
+                ? "bg-amber-800 text-white border-amber-800"
+                : "bg-white text-amber-900 border-amber-300 hover:bg-amber-50"
+            }`}
+          >
+            <Activity size={14} />
+            <span>Audit Stream</span>
+            <span className="bg-amber-200 text-amber-950 px-1.5 py-0.2 text-[10px] rounded-full font-black">
+              {events.length}
+            </span>
+          </button>
+          <Button variant="secondary" className="px-3 py-1 text-xs" onClick={() => { fetchOrders(); fetchEvents(); }}>
+            <RefreshCw size={14} className="mr-1" /> Refresh
+          </Button>
+        </div>
       </div>
+
+      {/* Live Event Audit Log Drawer */}
+      {showAuditLog && (
+        <div className="mb-6 bg-stone-900 text-stone-100 rounded-2xl p-5 border border-stone-800 shadow-xl space-y-3 animate-in fade-in slide-in-from-top-3">
+          <div className="flex items-center justify-between border-b border-stone-800 pb-3">
+            <div className="flex items-center gap-2">
+              <History className="w-5 h-5 text-amber-500" />
+              <h2 className="text-sm font-bold tracking-wide uppercase text-amber-400">
+                Manager Live Event Audit Stream
+              </h2>
+            </div>
+            <span className="text-[11px] font-mono text-stone-400">Showing last {events.length} events</span>
+          </div>
+
+          <div className="max-h-64 overflow-y-auto space-y-2 pr-1 divide-y divide-stone-800/60">
+            {events.length === 0 ? (
+              <p className="text-xs text-stone-500 py-4 text-center">No order events logged yet.</p>
+            ) : (
+              events.map((ev, i) => (
+                <div key={ev.id || i} className="pt-2 flex items-start justify-between text-xs gap-3">
+                  <div>
+                    <div className="flex items-center gap-2 mb-0.5">
+                      <span className="font-mono font-bold text-amber-400 bg-stone-800 px-1.5 py-0.5 rounded">
+                        #{ev.order_token}
+                      </span>
+                      {ev.table_number && (
+                        <span className="font-bold text-emerald-400 bg-emerald-950/60 px-1.5 py-0.5 rounded text-[10px]">
+                          Table {ev.table_number}
+                        </span>
+                      )}
+                      <span className="font-bold text-stone-200">{ev.title}</span>
+                    </div>
+                    <p className="text-stone-300 text-xs">{ev.description}</p>
+                  </div>
+                  <span className="text-[10px] text-stone-500 font-mono shrink-0">
+                    {new Date(ev.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                  </span>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      )}
 
       {isLoading ? (
         <div className="grid grid-cols-4 gap-4">

@@ -179,32 +179,50 @@ async def get_staff_analytics(
         
     hours_logged = round(total_minutes / 60.0, 1)
 
-    # 2. Orders Prepared and Avg Time
-    # Query orders assigned to this chef in the last 7 days
+    # 2. Chef & Waiter Performance Stats (Last 7 Days)
     from beanie.operators import In
-    orders = await Order.find(
+    chef_orders = await Order.find(
         Order.assigned_chef_id == PydanticObjectId(user_id),
         Order.created_at >= week_ago,
         In(Order.order_status, ["ready", "served"])
     ).to_list()
     
-    orders_prepared = len(orders)
+    orders_prepared = len(chef_orders)
     avg_prep_time_mins = 0
-    
     if orders_prepared > 0:
         total_prep_seconds = sum(
             (o.completed_at - o.created_at).total_seconds() 
-            for o in orders 
+            for o in chef_orders 
             if o.completed_at
         )
         avg_prep_time_mins = round((total_prep_seconds / orders_prepared) / 60.0, 1)
+
+    waiter_orders = await Order.find(
+        Order.assigned_waiter_id == PydanticObjectId(user_id),
+        Order.created_at >= week_ago,
+        Order.order_status == "served"
+    ).to_list()
+
+    orders_delivered = len(waiter_orders)
+    cash_collected = sum(o.total for o in waiter_orders if o.payment_method == "cod" and o.payment_status == "paid")
+    avg_delivery_time_mins = 0
+    if orders_delivered > 0:
+        total_deliv_seconds = sum(
+            (o.completed_at - o.created_at).total_seconds()
+            for o in waiter_orders
+            if o.completed_at
+        )
+        avg_delivery_time_mins = round((total_deliv_seconds / orders_delivered) / 60.0, 1)
 
     return {
         "status": "success",
         "data": {
             "hours_logged": hours_logged,
             "orders_prepared": orders_prepared,
-            "avg_prep_time_mins": avg_prep_time_mins
+            "avg_prep_time_mins": avg_prep_time_mins,
+            "orders_delivered": orders_delivered,
+            "cash_collected": round(cash_collected, 2),
+            "avg_delivery_time_mins": avg_delivery_time_mins
         }
     }
 

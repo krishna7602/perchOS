@@ -147,7 +147,7 @@ export default function StaffAnalyticsPage() {
             </div>
           </div>
 
-          {/* Detailed Table */}
+           {/* Detailed Table */}
           <h2 className="text-lg font-bold mb-4">Staff Performance breakdown</h2>
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
              <table className="w-full text-left">
@@ -156,31 +156,44 @@ export default function StaffAnalyticsPage() {
                    <th className="p-4 font-medium">Name</th>
                    <th className="p-4 font-medium">Role</th>
                    <th className="p-4 font-medium">Status</th>
-                   <th className="p-4 font-medium text-right">Orders Prepared</th>
-                   <th className="p-4 font-medium text-right">Avg Prep Time</th>
+                   <th className="p-4 font-medium text-right">Orders Completed</th>
+                   <th className="p-4 font-medium text-right">COD Cash Collected</th>
+                   <th className="p-4 font-medium text-right">Avg Time</th>
                  </tr>
                </thead>
                <tbody className="divide-y divide-gray-100">
                  {staffList.length === 0 ? (
                    <tr>
-                     <td colSpan={5} className="p-8 text-center text-gray-500 text-sm border-dashed">
+                     <td colSpan={6} className="p-8 text-center text-gray-500 text-sm border-dashed">
                        No staff found for this venue.
                      </td>
                    </tr>
                  ) : (
-                   staffList.map(staff => (
-                     <tr key={staff.id || staff._id}>
-                       <td className="p-4 font-medium text-gray-900">{staff.name}</td>
-                       <td className="p-4 text-gray-500 text-sm capitalize">{staff.role.replace("_", " ")}</td>
-                       <td className="p-4">
-                         <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700`}>
-                            {STATUS_MAP[staff.status]?.icon || "🔴"} {STATUS_MAP[staff.status]?.label || "Offline"}
-                         </span>
-                       </td>
-                       <td className="p-4 text-right font-bold text-gray-900">{staff.stats?.orders_prepared || 0}</td>
-                       <td className="p-4 text-right font-medium text-gray-600">{staff.stats?.avg_prep_time_mins || 0} mins</td>
-                     </tr>
-                   ))
+                   staffList.map(staff => {
+                     const isWaiter = staff.role === "waiter";
+                     const completedCount = isWaiter ? (staff.stats?.orders_delivered || 0) : (staff.stats?.orders_prepared || 0);
+                     const avgTime = isWaiter ? (staff.stats?.avg_delivery_time_mins || 0) : (staff.stats?.avg_prep_time_mins || 0);
+                     const cashColl = staff.stats?.cash_collected || 0;
+
+                     return (
+                       <tr key={staff.id || staff._id}>
+                         <td className="p-4 font-medium text-gray-900">{staff.name}</td>
+                         <td className="p-4 text-gray-500 text-sm capitalize">{staff.role.replace("_", " ")}</td>
+                         <td className="p-4">
+                           <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700`}>
+                              {STATUS_MAP[staff.status]?.icon || "🔴"} {STATUS_MAP[staff.status]?.label || "Offline"}
+                           </span>
+                         </td>
+                         <td className="p-4 text-right font-bold text-gray-900">
+                           {completedCount} <span className="text-[10px] text-gray-400 font-normal">{isWaiter ? "delivered" : "prepared"}</span>
+                         </td>
+                         <td className="p-4 text-right font-mono font-bold text-emerald-700">
+                           {isWaiter ? `₹${cashColl.toFixed(2)}` : "—"}
+                         </td>
+                         <td className="p-4 text-right font-medium text-gray-600">{avgTime} mins</td>
+                       </tr>
+                     );
+                   })
                  )}
                </tbody>
              </table>

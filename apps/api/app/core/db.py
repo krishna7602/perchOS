@@ -23,7 +23,7 @@ async def init_db():
     from app.domains.venues.restaurant_model import Restaurant
     from app.domains.venues.branch_model import Branch
     from app.domains.menu.models import MenuItem
-    from app.domains.orders.models import Order, Counter, Payment
+    from app.domains.orders.models import Order, Counter, Payment, OrderEvent
     from app.domains.chat.team_models import TeamChannel, TeamMessage
     from app.domains.notifications.models import PushSubscription
 
@@ -36,7 +36,7 @@ async def init_db():
     await init_beanie(
         database=db,
         document_models=[
-            User, Attendance, Restaurant, Branch, MenuItem, Order, Counter, Payment, TeamChannel, TeamMessage,
+            User, Attendance, Restaurant, Branch, MenuItem, Order, Counter, Payment, OrderEvent, TeamChannel, TeamMessage,
             CustomerAccount, CustomerProfile, SocialLink, Interest, ProfessionalTag,
             VenueSession, Connection, ConnectionRequest, DirectMessage, UserPreference,
             ProfileVisibility, UserStatus, VenueChatMessage, VenuePoll, PushSubscription
