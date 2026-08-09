@@ -64,7 +64,7 @@ async def create_branch(payload: VenueCreateRequest, user: User = Depends(requir
 
 
 @router.get("/admin/venues")
-async def list_branches(user: User = Depends(require_manager)):
+async def list_branches(user: User = Depends(require_staff)):
     """List all branches for the current user's restaurant."""
     if not user.restaurant_id:
         return {"venues": []}

@@ -51,16 +51,21 @@ export default function WaiterPortalPage() {
       return;
     }
 
-    listVenues(token).then((res) => {
-      setBranches(res.venues || []);
-      if (res.venues && res.venues.length > 0) {
-        const defaultBranch = String(res.venues[0]._id || res.venues[0].id);
-        setSelectedBranch(defaultBranch);
-        fetchOrders(defaultBranch);
-      } else {
+    listVenues(token)
+      .then((res) => {
+        setBranches(res.venues || []);
+        if (res.venues && res.venues.length > 0) {
+          const defaultBranch = String(res.venues[0]._id || res.venues[0].id);
+          setSelectedBranch(defaultBranch);
+          fetchOrders(defaultBranch);
+        } else {
+          setIsLoading(false);
+        }
+      })
+      .catch((err) => {
+        console.error("Failed to load venues:", err);
         setIsLoading(false);
-      }
-    });
+      });
   }, [token]);
 
   const fetchOrders = useCallback(async (branchId: string) => {

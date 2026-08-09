@@ -13,6 +13,7 @@ import re
 
 router = APIRouter(tags=["orders"])
 require_kitchen = RequireRole([Role.OWNER, Role.MANAGER, Role.CHEF])
+require_staff = RequireRole([Role.OWNER, Role.MANAGER, Role.CHEF, Role.WAITER])
 
 
 async def log_and_broadcast_event(
@@ -339,8 +340,8 @@ async def verify_payment(order_id: str, payload: VerifyPaymentRequest):
 
 
 @router.get("/admin/orders/{venue_id}")
-async def list_venue_orders(venue_id: str, user: User = Depends(require_kitchen)):
-    """Admin: list all orders for a branch (for the kanban board)."""
+async def list_venue_orders(venue_id: str, user: User = Depends(require_staff)):
+    """Admin: list all orders for a branch (for the kanban board and waiter portal)."""
     branch = await Branch.get(PydanticObjectId(venue_id))
     if not branch or branch.restaurant_id != user.restaurant_id:
         raise HTTPException(status_code=404, detail="branch_not_found")
