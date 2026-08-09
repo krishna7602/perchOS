@@ -9,7 +9,8 @@ import { Skeleton } from "@/components/ui/Skeleton";
 import { ArrowLeft, ChevronRight, RefreshCw, Activity, History, Clock } from "lucide-react";
 
 interface OrderData {
-  _id: string;
+  _id?: string;
+  id?: string;
   customer_handle: string;
   customer_name?: string;
   customer_email?: string;
@@ -23,6 +24,8 @@ interface OrderData {
   order_token?: string;
   assigned_waiter_name?: string;
 }
+
+const getOrderId = (o: any): string => String(o._id || o.id || "");
 
 interface AuditEvent {
   id?: string;
@@ -78,7 +81,7 @@ export default function OrdersKanbanPage() {
       const { markCashCollected } = await import("@/features/orders/api");
       await markCashCollected(orderId, token);
       setOrders((prev) =>
-        prev.map((o) => (o._id === orderId ? { ...o, payment_status: "paid" } : o))
+        prev.map((o) => (getOrderId(o) === orderId ? { ...o, payment_status: "paid" } : o))
       );
     } catch (err) {
       alert("Failed to mark cash as collected.");
@@ -232,87 +235,90 @@ export default function OrdersKanbanPage() {
                     No orders
                   </p>
                 ) : (
-                  ordersByStatus[status].map((order) => (
-                    <div
-                      key={order._id}
-                      className="rounded-xl p-3 transition-all duration-200 hover:scale-[1.01]"
-                      style={{
-                        background: "var(--color-surface)",
-                        border: "1px solid var(--color-border)",
-                        boxShadow: "var(--shadow-sm)",
-                      }}
-                    >
-                      <div className="flex items-center justify-between mb-1.5">
-                        <span className="text-xs font-bold font-mono px-2 py-0.5 rounded bg-amber-100 text-amber-900">
-                          {order.order_token || `#${order._id.slice(-6).toUpperCase()}`}
-                        </span>
-                        <span
-                          className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase ${
-                            order.payment_status === "paid" || order.order_status === "served"
-                              ? "bg-emerald-100 text-emerald-900 border border-emerald-300"
-                              : "bg-amber-100 text-amber-900 border border-amber-300"
-                          }`}
-                        >
-                          {order.payment_method} ({order.payment_status === "paid" || order.order_status === "served" ? "Paid" : "Unpaid"})
-                        </span>
-                      </div>
-
-                      {/* Table Number Pill */}
-                      <div className="mb-2 flex items-center justify-between">
-                        <span className="text-xs font-black text-amber-900 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-md">
-                          Table: {order.table_number || "Counter"}
-                        </span>
-                        {order.assigned_waiter_name && (
-                          <span className="text-[10px] text-gray-500 font-medium">
-                            Waiter: {order.assigned_waiter_name}
+                  ordersByStatus[status].map((order) => {
+                    const orderId = getOrderId(order);
+                    return (
+                      <div
+                        key={orderId}
+                        className="rounded-xl p-3 transition-all duration-200 hover:scale-[1.01]"
+                        style={{
+                          background: "var(--color-surface)",
+                          border: "1px solid var(--color-border)",
+                          boxShadow: "var(--shadow-sm)",
+                        }}
+                      >
+                        <div className="flex items-center justify-between mb-1.5">
+                          <span className="text-xs font-bold font-mono px-2 py-0.5 rounded bg-amber-100 text-amber-900">
+                            {order.order_token || `#${orderId.slice(-6).toUpperCase()}`}
                           </span>
-                        )}
-                      </div>
-
-                      <div className="mb-2">
-                        <p className="text-xs font-bold text-stone-800">
-                          {order.customer_name || order.customer_handle}
-                        </p>
-                        {order.customer_email && (
-                          <p className="text-[10px] text-stone-400 truncate">{order.customer_email}</p>
-                        )}
-                      </div>
-                      <div className="space-y-0.5 mb-2">
-                        {order.items.map((item, i) => (
-                          <p key={i} className="text-xs" style={{ color: "var(--color-text)" }}>
-                            {item.quantity}× {item.name} {item.variant_name ? <span className="text-[10px] text-gray-500 bg-gray-100 px-1 rounded ml-1">{item.variant_name}</span> : ""}
-                          </p>
-                        ))}
-                      </div>
-
-                      {order.payment_method === "cod" && order.payment_status !== "paid" && (
-                        <button
-                          onClick={() => handleMarkCashCollected(order._id)}
-                          className="w-full mb-2 text-xs py-1 px-2 rounded bg-amber-600 hover:bg-amber-700 text-white font-semibold cursor-pointer transition-colors"
-                        >
-                          💵 Cash collected
-                        </button>
-                      )}
-
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm font-bold" style={{ color: "var(--color-primary)" }}>
-                          ₹{order.total.toFixed(2)}
-                        </span>
-                        {status !== "served" && (
-                          <button
-                            onClick={() => handleAdvanceStatus(order._id, status)}
-                            className="flex items-center gap-1 text-xs px-2 py-1 rounded-lg cursor-pointer transition-colors"
-                            style={{
-                              background: "var(--color-accent)",
-                              color: "white",
-                            }}
+                          <span
+                            className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase ${
+                              order.payment_status === "paid" || order.order_status === "served"
+                                ? "bg-emerald-100 text-emerald-900 border border-emerald-300"
+                                : "bg-amber-100 text-amber-900 border border-amber-300"
+                            }`}
                           >
-                            Next <ChevronRight size={12} />
+                            {order.payment_method} ({order.payment_status === "paid" || order.order_status === "served" ? "Paid" : "Unpaid"})
+                          </span>
+                        </div>
+
+                        {/* Table Number Pill */}
+                        <div className="mb-2 flex items-center justify-between">
+                          <span className="text-xs font-black text-amber-900 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-md">
+                            Table: {order.table_number || "Counter"}
+                          </span>
+                          {order.assigned_waiter_name && (
+                            <span className="text-[10px] text-gray-500 font-medium">
+                              Waiter: {order.assigned_waiter_name}
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="mb-2">
+                          <p className="text-xs font-bold text-stone-800">
+                            {order.customer_name || order.customer_handle}
+                          </p>
+                          {order.customer_email && (
+                            <p className="text-[10px] text-stone-400 truncate">{order.customer_email}</p>
+                          )}
+                        </div>
+                        <div className="space-y-0.5 mb-2">
+                          {order.items.map((item, i) => (
+                            <p key={i} className="text-xs" style={{ color: "var(--color-text)" }}>
+                              {item.quantity}× {item.name} {item.variant_name ? <span className="text-[10px] text-gray-500 bg-gray-100 px-1 rounded ml-1">{item.variant_name}</span> : ""}
+                            </p>
+                          ))}
+                        </div>
+
+                        {order.payment_method === "cod" && order.payment_status !== "paid" && (
+                          <button
+                            onClick={() => handleMarkCashCollected(orderId)}
+                            className="w-full mb-2 text-xs py-1 px-2 rounded bg-amber-600 hover:bg-amber-700 text-white font-semibold cursor-pointer transition-colors"
+                          >
+                            💵 Cash collected
                           </button>
                         )}
+
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm font-bold" style={{ color: "var(--color-primary)" }}>
+                            ₹{order.total.toFixed(2)}
+                          </span>
+                          {status !== "served" && (
+                            <button
+                              onClick={() => handleAdvanceStatus(orderId, status)}
+                              className="flex items-center gap-1 text-xs px-2 py-1 rounded-lg cursor-pointer transition-colors"
+                              style={{
+                                background: "var(--color-accent)",
+                                color: "white",
+                              }}
+                            >
+                              Next <ChevronRight size={12} />
+                            </button>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  ))
+                    );
+                  })
                 )}
               </div>
             </div>

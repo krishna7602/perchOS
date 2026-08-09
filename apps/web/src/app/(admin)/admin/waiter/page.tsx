@@ -16,7 +16,8 @@ interface OrderItem {
 }
 
 interface OrderData {
-  _id: string;
+  _id?: string;
+  id?: string;
   order_token?: string;
   customer_handle: string;
   customer_name?: string;
@@ -32,6 +33,8 @@ interface OrderData {
   assigned_waiter_name?: string;
   created_at: string;
 }
+
+const getOrderId = (o: any): string => String(o._id || o.id || "");
 
 export default function WaiterPortalPage() {
   const router = useRouter();
@@ -235,9 +238,10 @@ export default function WaiterPortalPage() {
                 {readyOrders.map((order) => {
                   const isCOD = order.payment_method === "cod";
                   const isPaid = order.payment_status === "paid";
+                  const orderId = getOrderId(order);
                   return (
                     <div
-                      key={order._id}
+                      key={orderId}
                       className="bg-white rounded-2xl p-5 border-2 border-stone-200 shadow-md hover:border-amber-700 transition-all flex flex-col justify-between"
                     >
                       <div>
@@ -260,7 +264,7 @@ export default function WaiterPortalPage() {
                         {/* Customer & Order Token */}
                         <div className="mb-3">
                           <p className="text-xs font-mono font-bold text-stone-500">
-                            Order Token: #{order.order_token || order._id.slice(-6).toUpperCase()}
+                            Order Token: #{order.order_token || orderId.slice(-6).toUpperCase()}
                           </p>
                           <p className="text-sm font-bold text-stone-900 mt-0.5">
                             Customer: {order.customer_name || order.customer_handle}
@@ -286,15 +290,15 @@ export default function WaiterPortalPage() {
                       {/* Actions */}
                       <div className="grid grid-cols-2 gap-2 pt-2 border-t border-stone-100">
                         <button
-                          onClick={() => handleReject(order._id)}
-                          disabled={submittingId === order._id}
+                          onClick={() => handleReject(orderId)}
+                          disabled={submittingId === orderId}
                           className="py-2.5 px-3 rounded-xl font-bold text-xs text-red-700 bg-red-50 border border-red-200 hover:bg-red-100 transition-colors flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
                         >
                           <X size={14} /> Reject Pickup
                         </button>
                         <button
-                          onClick={() => handleAccept(order._id)}
-                          disabled={submittingId === order._id}
+                          onClick={() => handleAccept(orderId)}
+                          disabled={submittingId === orderId}
                           className="py-2.5 px-3 rounded-xl font-bold text-xs text-white bg-amber-800 hover:bg-amber-900 transition-colors flex items-center justify-center gap-1.5 cursor-pointer shadow-sm disabled:opacity-50"
                         >
                           <Check size={14} /> Accept Pickup
@@ -322,11 +326,12 @@ export default function WaiterPortalPage() {
                 {myDeliveries.map((order) => {
                   const isCOD = order.payment_method === "cod";
                   const isPaid = order.payment_status === "paid";
-                  const isConfirmingCash = confirmCashId === order._id;
+                  const orderId = getOrderId(order);
+                  const isConfirmingCash = confirmCashId === orderId;
 
                   return (
                     <div
-                      key={order._id}
+                      key={orderId}
                       className="bg-white rounded-2xl p-5 border-2 border-emerald-600 shadow-lg flex flex-col justify-between"
                     >
                       <div>
@@ -342,7 +347,7 @@ export default function WaiterPortalPage() {
 
                         <div className="mb-3">
                           <p className="text-xs font-mono font-bold text-stone-500">
-                            Order Token: #{order.order_token || order._id.slice(-6).toUpperCase()}
+                            Order Token: #{order.order_token || orderId.slice(-6).toUpperCase()}
                           </p>
                           <p className="text-sm font-bold text-stone-900 mt-0.5">
                             Customer: {order.customer_name || order.customer_handle}
@@ -380,7 +385,7 @@ export default function WaiterPortalPage() {
                         {isCOD && !isPaid ? (
                           !isConfirmingCash ? (
                             <button
-                              onClick={() => setConfirmCashId(order._id)}
+                              onClick={() => setConfirmCashId(orderId)}
                               className="w-full py-3 px-4 rounded-xl font-bold text-xs text-white bg-amber-700 hover:bg-amber-800 transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-md"
                             >
                               💵 Confirm Cash Payment & Deliver Order
@@ -398,19 +403,19 @@ export default function WaiterPortalPage() {
                                   Cancel
                                 </button>
                                 <button
-                                  onClick={() => handleConfirmCashAndServe(order._id)}
-                                  disabled={submittingId === order._id}
+                                  onClick={() => handleConfirmCashAndServe(orderId)}
+                                  disabled={submittingId === orderId}
                                   className="flex-1 py-2 text-xs font-bold bg-emerald-700 text-white rounded-lg hover:bg-emerald-800 cursor-pointer shadow-sm"
                                 >
-                                  {submittingId === order._id ? "Processing..." : "YES, Confirm & Mark Served"}
+                                  {submittingId === orderId ? "Processing..." : "YES, Confirm & Mark Served"}
                                 </button>
                               </div>
                             </div>
                           )
                         ) : (
                           <button
-                            onClick={() => handleConfirmCashAndServe(order._id)}
-                            disabled={submittingId === order._id}
+                            onClick={() => handleConfirmCashAndServe(orderId)}
+                            disabled={submittingId === orderId}
                             className="w-full py-3 px-4 rounded-xl font-bold text-xs text-white bg-emerald-700 hover:bg-emerald-800 transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-md disabled:opacity-50"
                           >
                             <Check size={16} /> Mark Order Delivered & Served
