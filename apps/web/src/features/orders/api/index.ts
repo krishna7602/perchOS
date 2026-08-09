@@ -3,17 +3,21 @@ import { apiFetch } from "@/lib/apiClient";
 export function createOrder(data: {
   venue_id: string;
   customer_handle: string;
+  customer_name?: string;
+  customer_email?: string;
+  table_number: string;
   items: { menu_item_id: string; name: string; price: number; quantity: number }[];
   payment_method: string;
 }) {
-  return apiFetch<{ order: Record<string, unknown> }>("/orders", {
+  return apiFetch<{ order: Record<string, unknown>; access_token?: string }>("/orders", {
     method: "POST",
     body: JSON.stringify(data),
   });
 }
 
-export function getOrder(orderId: string) {
-  return apiFetch<{ order: Record<string, unknown> }>(`/orders/${orderId}`);
+export function getOrder(orderId: string, accessToken?: string) {
+  const query = accessToken ? `?access_token=${encodeURIComponent(accessToken)}` : "";
+  return apiFetch<{ order: Record<string, unknown> }>(`/orders/${orderId}${query}`);
 }
 
 export function listVenueOrders(venueId: string, token: string) {
@@ -48,6 +52,20 @@ export function acceptOrder(orderId: string, token: string) {
 
 export function rejectOrder(orderId: string, token: string) {
   return apiFetch<{ status: string; message: string }>(`/admin/orders/${orderId}/reject`, {
+    method: "POST",
+    token,
+  });
+}
+
+export function waiterAcceptPickup(orderId: string, token: string) {
+  return apiFetch<{ status: string; order: Record<string, unknown> }>(`/admin/orders/${orderId}/waiter-accept`, {
+    method: "POST",
+    token,
+  });
+}
+
+export function waiterRejectPickup(orderId: string, token: string) {
+  return apiFetch<{ status: string; message: string }>(`/admin/orders/${orderId}/waiter-reject`, {
     method: "POST",
     token,
   });

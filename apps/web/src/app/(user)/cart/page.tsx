@@ -14,14 +14,34 @@ export default function CartPage() {
   const router = useRouter();
   const cart = useCart();
   const [paymentMethod, setPaymentMethod] = useState("dummy_card");
+  const [tableNumber, setTableNumber] = useState(() => {
+    return typeof window !== "undefined" ? sessionStorage.getItem("perch_table_number") || "" : "";
+  });
+  const [customerName, setCustomerName] = useState(() => {
+    return typeof window !== "undefined" ? sessionStorage.getItem("perch_handle") || "" : "";
+  });
+  const [customerEmail, setCustomerEmail] = useState(() => {
+    return typeof window !== "undefined" ? sessionStorage.getItem("perch_email") || "" : "";
+  });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
 
   const handlePlaceOrder = async () => {
     if (cart.items.length === 0) return;
 
-    const handle = sessionStorage.getItem("perch_handle") || "Guest";
-    const email = sessionStorage.getItem("perch_email") || undefined;
+    if (!tableNumber.trim()) {
+      setError("Please enter your Table Number to place an order.");
+      return;
+    }
+
+    const handle = customerName.trim() || sessionStorage.getItem("perch_handle") || "Guest";
+    const email = customerEmail.trim() || sessionStorage.getItem("perch_email") || undefined;
+    const tableNum = tableNumber.trim();
+
+    // Store in session for quick re-use
+    sessionStorage.setItem("perch_table_number", tableNum);
+    if (customerName.trim()) sessionStorage.setItem("perch_handle", customerName.trim());
+    if (customerEmail.trim()) sessionStorage.setItem("perch_email", customerEmail.trim());
 
     setIsSubmitting(true);
     setError("");
@@ -39,6 +59,9 @@ export default function CartPage() {
       const result = await createOrder({
         venue_id: cart.venueId,
         customer_handle: handle,
+        customer_name: handle,
+        customer_email: email,
+        table_number: tableNum,
         items: validItems.map((i) => ({
           menu_item_id: i.menu_item_id,
           name: i.name,
@@ -51,6 +74,7 @@ export default function CartPage() {
 
       const order = result.order;
       const orderId = order._id || order.id; // handle possible _id mapping
+      const accessToken = result.access_token || order.access_token;
       const providerOrderId = result.provider_order_id;
       
       // Save order to local storage for the Orders tab
@@ -58,6 +82,13 @@ export default function CartPage() {
       if (!savedOrders.includes(orderId)) {
         savedOrders.push(orderId);
         localStorage.setItem("perch_my_orders", JSON.stringify(savedOrders));
+      }
+
+      // Save order access token for security verification
+      if (accessToken) {
+        const tokenMap = JSON.parse(localStorage.getItem("perch_order_tokens") || "{}");
+        tokenMap[orderId] = accessToken;
+        localStorage.setItem("perch_order_tokens", JSON.stringify(tokenMap));
       }
 
       if (paymentMethod === "razorpay" && providerOrderId) {
@@ -215,6 +246,62 @@ export default function CartPage() {
                 >
                   ₹{cart.total.toFixed(2)}
                 </span>
+              </div>
+            </div>
+
+            {/* Table Number & Details */}
+            <div
+              className="rounded-xl p-4 space-y-4"
+              style={{
+                background: "var(--color-surface)",
+                boxShadow: "var(--shadow-sm)",
+                border: "1px solid var(--color-border)",
+              }}
+            >
+              <h2 className="text-sm font-semibold border-b pb-2" style={{ color: "var(--color-text)", borderColor: "var(--color-border)" }}>
+                Table & Customer Details
+              </h2>
+              <div>
+                <label className="block text-xs font-semibold mb-1" style={{ color: "var(--color-text)" }}>
+                  Table Number <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={tableNumber}
+                  onChange={(e) => setTableNumber(e.target.value)}
+                  placeholder="e.g. Table 5, T-12, Counter"
+                  className="w-full px-3.5 py-2.5 rounded-xl text-sm outline-none border transition-all"
+                  style={{ background: "var(--color-bg)", borderColor: "var(--color-border)", color: "var(--color-text)" }}
+                  required
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold mb-1" style={{ color: "var(--color-text)" }}>
+                    Your Name
+                  </label>
+                  <input
+                    type="text"
+                    value={customerName}
+                    onChange={(e) => setCustomerName(e.target.value)}
+                    placeholder="Guest Name"
+                    className="w-full px-3.5 py-2 rounded-xl text-xs outline-none border transition-all"
+                    style={{ background: "var(--color-bg)", borderColor: "var(--color-border)", color: "var(--color-text)" }}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold mb-1" style={{ color: "var(--color-text)" }}>
+                    Email <span className="text-[10px] text-gray-400 font-normal">(Optional)</span>
+                  </label>
+                  <input
+                    type="email"
+                    value={customerEmail}
+                    onChange={(e) => setCustomerEmail(e.target.value)}
+                    placeholder="name@example.com"
+                    className="w-full px-3.5 py-2 rounded-xl text-xs outline-none border transition-all"
+                    style={{ background: "var(--color-bg)", borderColor: "var(--color-border)", color: "var(--color-text)" }}
+                  />
+                </div>
               </div>
             </div>
 

@@ -17,6 +17,9 @@ class CreateOrderRequest(BaseModel):
 
     venue_id: str
     customer_handle: str
+    customer_name: str | None = None
+    customer_email: str | None = None
+    table_number: str
     items: list[OrderLineInput]
     payment_method: str  # "dummy_card" | "cod"
 

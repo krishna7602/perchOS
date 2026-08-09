@@ -11,6 +11,9 @@ import { ArrowLeft, ChevronRight, RefreshCw } from "lucide-react";
 interface OrderData {
   _id: string;
   customer_handle: string;
+  customer_name?: string;
+  customer_email?: string;
+  table_number?: string;
   items: { name: string; quantity: number; price: number; variant_name?: string }[];
   total: number;
   payment_method: string;
@@ -18,6 +21,7 @@ interface OrderData {
   order_status: string;
   created_at: string;
   order_token?: string;
+  assigned_waiter_name?: string;
 }
 
 export default function OrdersKanbanPage() {
@@ -154,23 +158,41 @@ export default function OrdersKanbanPage() {
                         boxShadow: "var(--shadow-sm)",
                       }}
                     >
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-xs font-bold font-mono px-2 py-1 rounded" style={{ color: "var(--color-primary)", background: "rgba(185, 84, 45, 0.1)" }}>
+                      <div className="flex items-center justify-between mb-1.5">
+                        <span className="text-xs font-bold font-mono px-2 py-0.5 rounded bg-amber-100 text-amber-900">
                           {order.order_token || `#${order._id.slice(-6).toUpperCase()}`}
                         </span>
                         <span
-                          className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                          className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase ${
                             order.payment_status === "paid" || order.order_status === "served"
-                              ? "status-ready"
-                              : "bg-amber-100 text-amber-800 border border-amber-300"
+                              ? "bg-emerald-100 text-emerald-900 border border-emerald-300"
+                              : "bg-amber-100 text-amber-900 border border-amber-300"
                           }`}
                         >
-                          {order.payment_status === "paid" || order.order_status === "served" ? "Paid" : "Cash Pending"}
+                          {order.payment_method} ({order.payment_status === "paid" || order.order_status === "served" ? "Paid" : "Unpaid"})
                         </span>
                       </div>
-                      <p className="text-xs font-medium mb-1" style={{ color: "var(--color-primary)" }}>
-                        {order.customer_handle}
-                      </p>
+
+                      {/* Table Number Pill */}
+                      <div className="mb-2 flex items-center justify-between">
+                        <span className="text-xs font-black text-amber-900 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-md">
+                          Table: {order.table_number || "Counter"}
+                        </span>
+                        {order.assigned_waiter_name && (
+                          <span className="text-[10px] text-gray-500 font-medium">
+                            Waiter: {order.assigned_waiter_name}
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="mb-2">
+                        <p className="text-xs font-bold text-stone-800">
+                          {order.customer_name || order.customer_handle}
+                        </p>
+                        {order.customer_email && (
+                          <p className="text-[10px] text-stone-400 truncate">{order.customer_email}</p>
+                        )}
+                      </div>
                       <div className="space-y-0.5 mb-2">
                         {order.items.map((item, i) => (
                           <p key={i} className="text-xs" style={{ color: "var(--color-text)" }}>

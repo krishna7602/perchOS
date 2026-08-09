@@ -22,6 +22,10 @@ class Order(Document):
     venue_id: Optional[PydanticObjectId] = None  # legacy support
     order_token: str | None = None  # Unique token for invoicing and tracking
     customer_handle: str  # chat display name / anon handle, no PII required
+    customer_name: str | None = None
+    customer_email: str | None = None
+    table_number: str | None = None
+    access_token: str | None = None
     items: list[OrderLine]
     total: float
     payment_method: str  # "dummy_card" | "cod"
@@ -36,6 +40,8 @@ class Order(Document):
     assigned_chef_id: PydanticObjectId | None = None
     assigned_waiter_id: PydanticObjectId | None = None
     rejected_by: list[PydanticObjectId] = Field(default_factory=list)
+    waiter_rejected_by: list[PydanticObjectId] = Field(default_factory=list)
+    pickup_status: str = "pending"  # pending | accepted | rejected | completed
     is_dispatched: bool = False
 
     class Settings:

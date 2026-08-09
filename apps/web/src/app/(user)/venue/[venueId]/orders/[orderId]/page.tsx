@@ -38,7 +38,9 @@ export default function OrderPage() {
 
   const fetchOrder = async () => {
     try {
-      const data = await getOrder(orderId);
+      const tokenMap = typeof window !== "undefined" ? JSON.parse(localStorage.getItem("perch_order_tokens") || "{}") : {};
+      const accessToken = tokenMap[orderId];
+      const data = await getOrder(orderId, accessToken);
       
       const newStatus = data.order?.order_status as string;
       if (prevStatus.current && newStatus && prevStatus.current !== newStatus) {
@@ -52,7 +54,7 @@ export default function OrderPage() {
       setOrder(data.order);
       setIsLoading(false);
     } catch {
-      setError("Order not found.");
+      setError("Order not found or access denied.");
       setIsLoading(false);
     }
   };
@@ -276,15 +278,30 @@ export default function OrderPage() {
             {/* Meta Details */}
             <div className="p-4 border-b border-stone-200 text-xs grid grid-cols-2 gap-3 bg-white">
               <div>
+                <span className="text-gray-400 font-medium block">Table Number:</span>
+                <span className="font-bold text-amber-900 text-sm">
+                  {(order.table_number as string) || "Counter / Takeaway"}
+                </span>
+              </div>
+              <div>
+                <span className="text-gray-400 font-medium block">Customer:</span>
+                <span className="font-semibold text-gray-800 truncate block">
+                  {(order.customer_name as string) || (order.customer_handle as string) || handle || "Valued Customer"}
+                </span>
+                {!!order.customer_email && (
+                  <span className="text-[10px] text-gray-400 block truncate">{order.customer_email as string}</span>
+                )}
+              </div>
+              <div>
                 <span className="text-gray-400 font-medium block">Date & Time:</span>
                 <span className="font-semibold text-gray-800">
                   {new Date(order.created_at as string).toLocaleString()}
                 </span>
               </div>
               <div>
-                <span className="text-gray-400 font-medium block">Customer:</span>
-                <span className="font-semibold text-gray-800 truncate block">
-                  {(order.customer_handle as string) || handle || "Valued Customer"}
+                <span className="text-gray-400 font-medium block">Payment Method:</span>
+                <span className="font-semibold text-gray-800 uppercase">
+                  {((order.payment_method as string) || "COD").replace("_", " ")} (₹{totalAmount.toFixed(2)})
                 </span>
               </div>
             </div>
