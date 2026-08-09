@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { useCart } from "@/hooks/useCart";
 import { createOrder } from "@/lib/api";
 import { verifyPayment } from "@/features/orders/api";
@@ -24,6 +25,7 @@ export default function CartPage() {
     return typeof window !== "undefined" ? sessionStorage.getItem("perch_email") || "" : "";
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [acceptedTerms, setAcceptedTerms] = useState(true);
   const [error, setError] = useState("");
 
   const handlePlaceOrder = async () => {
@@ -327,12 +329,33 @@ export default function CartPage() {
               </div>
             )}
 
+            {/* T&C Agreement Checkbox */}
+            <label className="flex items-start gap-2 text-xs text-stone-600 cursor-pointer p-1 select-none">
+              <input
+                type="checkbox"
+                checked={acceptedTerms}
+                onChange={(e) => setAcceptedTerms(e.target.checked)}
+                className="mt-0.5 rounded border-stone-300 text-amber-900 focus:ring-0 cursor-pointer"
+              />
+              <span className="leading-snug">
+                I agree to the{" "}
+                <Link href="/terms" target="_blank" className="font-bold underline text-amber-900 hover:text-amber-700">
+                  Terms & Conditions
+                </Link>{" "}
+                and{" "}
+                <Link href="/privacy" target="_blank" className="font-bold underline text-amber-900 hover:text-amber-700">
+                  Privacy Policy
+                </Link>.
+              </span>
+            </label>
+
             {/* Place order button */}
             <Button
               variant="primary"
               className="w-full text-base py-3"
               onClick={handlePlaceOrder}
               isLoading={isSubmitting}
+              disabled={isSubmitting || !acceptedTerms}
             >
               {paymentMethod === "cod" ? "Place Order (Pay on Delivery)" : "Pay & Place Order"}
             </Button>

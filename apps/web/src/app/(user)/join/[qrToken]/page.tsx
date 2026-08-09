@@ -2,6 +2,7 @@
 
 import { useEffect, useState, Suspense } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
 import { getVenueByQr, customerLogin, customerOnboarding } from "@/lib/api";
 import { Loader } from "@/components/ui/Loader";
 import { Globe, Sparkles, ChevronRight, User } from "lucide-react";
@@ -23,6 +24,7 @@ function JoinPageContent() {
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [acceptedTerms, setAcceptedTerms] = useState(true);
 
   // States: "login" | "onboarding" | "joining"
   const [step, setStep] = useState<"login" | "onboarding" | "joining">("login");
@@ -358,7 +360,7 @@ function JoinPageContent() {
           {/* Stagger 4: Google Sign-in Card */}
           <div className="entrance-stagger-4">
             <div 
-              className="rounded-3xl p-6 mb-8 border transition-all duration-300"
+              className="rounded-3xl p-6 mb-6 border transition-all duration-300 space-y-4"
               style={{ 
                 background: "var(--surface)", 
                 borderColor: "var(--border)",
@@ -367,7 +369,7 @@ function JoinPageContent() {
             >
               <button
                 onClick={handleGoogleLogin}
-                disabled={isSubmitting}
+                disabled={isSubmitting || !acceptedTerms}
                 className="btn-google w-full relative flex items-center justify-center gap-3 font-semibold py-3.5 px-4 rounded-xl cursor-pointer disabled:opacity-50 min-h-[48px]"
               >
                 {isSubmitting ? (
@@ -387,6 +389,26 @@ function JoinPageContent() {
                   </>
                 )}
               </button>
+
+              {/* T&C Checkbox */}
+              <label className="flex items-start gap-2 text-xs text-[#95816D] cursor-pointer pt-1 select-none">
+                <input
+                  type="checkbox"
+                  checked={acceptedTerms}
+                  onChange={(e) => setAcceptedTerms(e.target.checked)}
+                  className="mt-0.5 rounded border-[#C97B4A] text-[#C97B4A] focus:ring-0 cursor-pointer"
+                />
+                <span className="leading-snug">
+                  I agree to the{" "}
+                  <Link href="/terms" target="_blank" className="font-bold underline text-[#6B3A28] hover:text-[#C97B4A]">
+                    Terms & Conditions
+                  </Link>{" "}
+                  and{" "}
+                  <Link href="/privacy" target="_blank" className="font-bold underline text-[#6B3A28] hover:text-[#C97B4A]">
+                    Privacy Policy
+                  </Link>.
+                </span>
+              </label>
             </div>
           </div>
 
