@@ -104,7 +104,10 @@ export default function TermsAndConditionsPage() {
             5. Modifications & Support
           </h2>
           <p className="text-xs sm:text-sm text-stone-600 leading-relaxed">
-            Perch reserves the right to update these terms at any time. Continued use of the platform constitutes agreement to the updated terms. For support or queries, contact us at <strong>support@perch.store</strong>.
+            Perch reserves the right to update these terms at any time. Continued use of the platform constitutes agreement to the updated terms. For support, feedback, or queries, contact us at{" "}
+            <a href="mailto:ramkrishnam170@gmail.com" className="text-amber-900 font-bold underline hover:text-amber-700">
+              ramkrishnam170@gmail.com
+            </a>.
           </p>
         </section>
       </div>

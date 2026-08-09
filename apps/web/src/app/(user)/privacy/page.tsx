@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowLeft, ShieldCheck, Lock, Eye, Database, FileText } from "lucide-react";
+import { ArrowLeft, ShieldCheck, Lock, Eye, Database, FileText, Mail } from "lucide-react";
 
 export default function PrivacyPolicyPage() {
   return (
@@ -88,6 +88,20 @@ export default function PrivacyPolicyPage() {
           </h2>
           <p className="text-xs sm:text-sm text-stone-600 leading-relaxed">
             Perch uses browser `sessionStorage` and `localStorage` to save your active table number, session handle, and local notifications so you don’t need to re-enter them during your cafe visit.
+          </p>
+        </section>
+
+        {/* Section 5 */}
+        <section className="bg-white rounded-2xl p-6 border border-stone-200 shadow-xs">
+          <h2 className="text-lg font-bold text-stone-900 mb-3 flex items-center gap-2">
+            <Mail className="w-5 h-5 text-emerald-700" />
+            5. Contact, Support & Feedback
+          </h2>
+          <p className="text-xs sm:text-sm text-stone-600 leading-relaxed">
+            For support, feedback, privacy inquiries, or data requests, please contact us directly at{" "}
+            <a href="mailto:ramkrishnam170@gmail.com" className="text-emerald-900 font-bold underline hover:text-emerald-700">
+              ramkrishnam170@gmail.com
+            </a>.
           </p>
         </section>
       </div>
