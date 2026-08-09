@@ -20,6 +20,7 @@ from app.deps import get_current_user, RequireRole
 router = APIRouter(tags=["branches"])
 require_owner = RequireRole([Role.OWNER])
 require_manager = RequireRole([Role.OWNER, Role.MANAGER])
+require_staff = RequireRole([Role.OWNER, Role.MANAGER, Role.CHEF, Role.WAITER])
 
 @router.post("/admin/venues")
 async def create_branch(payload: VenueCreateRequest, user: User = Depends(require_owner)):
