@@ -30,6 +30,7 @@ export default function ChefPortalPage() {
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentStatus, setCurrentStatus] = useState("OFFLINE");
+  const [channelFilter, setChannelFilter] = useState<"ALL" | "PERCH" | "ZOMATO" | "SWIGGY">("ALL");
 
   useEffect(() => {
     init();
@@ -207,12 +208,29 @@ export default function ChefPortalPage() {
     }
   };
 
-  // Filter orders assigned to this chef
-  const myOrders = orders.filter(o => (o.assigned_chef_id === userId) && (o.order_status !== "served"));
+  // Filter orders assigned to this chef or active in venue
+  const channelFiltered = orders.filter(o => {
+    if (channelFilter === "ALL") return true;
+    const src = (o.source || "PERCH").toUpperCase();
+    return src === channelFilter;
+  });
+
+  const myOrders = channelFiltered.filter(o => (o.assigned_chef_id === userId || !o.assigned_chef_id) && (o.order_status !== "served"));
   
   const pendingAcceptance = myOrders.filter(o => o.order_status === "received");
   const currentlyPreparing = myOrders.filter(o => o.order_status === "preparing");
   const readyOrders = myOrders.filter(o => o.order_status === "ready");
+
+  const renderChannelBadge = (source?: string) => {
+    const src = (source || "PERCH").toUpperCase();
+    if (src === "ZOMATO") {
+      return <span className="px-2.5 py-0.5 bg-red-100 text-red-800 border border-red-200 rounded-lg text-xs font-bold tracking-wide">🟠 ZOMATO</span>;
+    }
+    if (src === "SWIGGY") {
+      return <span className="px-2.5 py-0.5 bg-orange-100 text-orange-800 border border-orange-200 rounded-lg text-xs font-bold tracking-wide">🔵 SWIGGY</span>;
+    }
+    return <span className="px-2.5 py-0.5 bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-lg text-xs font-bold tracking-wide">🟢 PERCH DINE-IN</span>;
+  };
 
   return (
     <div className="p-6 lg:p-8">
@@ -220,9 +238,9 @@ export default function ChefPortalPage() {
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2">
             <UtensilsCrossed className="text-[var(--color-primary)]" />
-            Chef Portal
+            Chef Portal & Unified KDS
           </h1>
-          <p className="text-sm text-gray-500">Manage your active assignments and presence.</p>
+          <p className="text-sm text-gray-500">Manage orders across Zomato, Swiggy, and Perch dine-in channels.</p>
         </div>
         
         <div className="flex items-center gap-4">
@@ -245,6 +263,27 @@ export default function ChefPortalPage() {
             ))}
           </select>
         </div>
+      </div>
+
+      {/* POS Channel Aggregator Filter Bar */}
+      <div className="flex items-center gap-2 mb-6 overflow-x-auto pb-2">
+        <span className="text-xs font-semibold uppercase text-gray-400 mr-2">Filter Channels:</span>
+        {(["ALL", "PERCH", "ZOMATO", "SWIGGY"] as const).map((ch) => (
+          <button
+            key={ch}
+            onClick={() => setChannelFilter(ch)}
+            className={`px-4 py-1.5 rounded-xl text-xs font-bold transition-all ${
+              channelFilter === ch
+                ? "bg-gray-900 text-white shadow-sm"
+                : "bg-white text-gray-600 border border-gray-200 hover:bg-gray-50"
+            }`}
+          >
+            {ch === "ALL" && "All Orders"}
+            {ch === "PERCH" && "🟢 Perch Dine-In"}
+            {ch === "ZOMATO" && "🟠 Zomato"}
+            {ch === "SWIGGY" && "🔵 Swiggy"}
+          </button>
+        ))}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
@@ -281,23 +320,34 @@ export default function ChefPortalPage() {
                 pendingAcceptance.map(order => (
                   <div key={order._id || order.id} className="bg-white p-5 rounded-2xl border border-amber-200 shadow-sm relative overflow-hidden">
                     <div className="absolute top-0 left-0 w-1 h-full bg-amber-400" />
-                    <div className="flex justify-between items-start mb-4">
+                    <div className="flex justify-between items-start mb-3">
                       <div>
-                        <div className="font-bold text-gray-900">Order #{String(order._id || order.id).slice(-6).toUpperCase()}</div>
-                        <div className="text-xs text-gray-500 mt-1 flex items-center gap-1">
-                          <Clock size={12} /> Assigned just now
+                        <div className="flex items-center gap-2 mb-1">
+                          {renderChannelBadge(order.source)}
+                          <span className="font-bold text-gray-900">
+                            #{order.external_order_id || order.order_token || String(order._id || order.id).slice(-6).toUpperCase()}
+                          </span>
+                        </div>
+                        <div className="text-xs text-gray-500 flex items-center gap-1">
+                          <Clock size={12} /> {order.table_number || "Takeout / Delivery"}
                         </div>
                       </div>
                       <div className="font-bold text-lg">₹{order.total}</div>
                     </div>
                     
-                    <ul className="space-y-2 mb-6 text-sm bg-gray-50 p-3 rounded-xl">
+                    <ul className="space-y-2 mb-4 text-sm bg-gray-50 p-3 rounded-xl">
                       {order.items.map((item: any, idx: number) => (
                         <li key={idx} className="flex justify-between">
-                          <span><span className="font-medium">{item.quantity}x</span> {item.name}</span>
+                          <span><span className="font-medium">{item.quantity}x</span> {item.name} {item.variant_name ? `(${item.variant_name})` : ""}</span>
                         </li>
                       ))}
                     </ul>
+
+                    {order.channel_metadata?.instructions && (
+                      <div className="mb-4 text-xs bg-amber-50 text-amber-800 p-2.5 rounded-lg border border-amber-100 font-medium">
+                        📝 Note: {order.channel_metadata.instructions}
+                      </div>
+                    )}
 
                     <div className="flex gap-3">
                       <button 
@@ -334,19 +384,33 @@ export default function ChefPortalPage() {
                 currentlyPreparing.map(order => (
                   <div key={order._id || order.id} className="bg-white p-5 rounded-2xl border shadow-sm relative overflow-hidden">
                     <div className="absolute top-0 left-0 w-1 h-full bg-blue-500" />
-                    <div className="flex justify-between items-start mb-4">
+                    <div className="flex justify-between items-start mb-3">
                       <div>
-                        <div className="font-bold text-gray-900">Order #{String(order._id || order.id).slice(-6).toUpperCase()}</div>
+                        <div className="flex items-center gap-2 mb-1">
+                          {renderChannelBadge(order.source)}
+                          <span className="font-bold text-gray-900">
+                            #{order.external_order_id || order.order_token || String(order._id || order.id).slice(-6).toUpperCase()}
+                          </span>
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          {order.table_number || "Takeout / Delivery"}
+                        </div>
                       </div>
                     </div>
                     
-                    <ul className="space-y-2 mb-6 text-sm bg-blue-50/50 p-3 rounded-xl">
+                    <ul className="space-y-2 mb-4 text-sm bg-blue-50/50 p-3 rounded-xl">
                       {order.items.map((item: any, idx: number) => (
                         <li key={idx} className="flex justify-between">
-                          <span><span className="font-medium">{item.quantity}x</span> {item.name}</span>
+                          <span><span className="font-medium">{item.quantity}x</span> {item.name} {item.variant_name ? `(${item.variant_name})` : ""}</span>
                         </li>
                       ))}
                     </ul>
+
+                    {order.channel_metadata?.rider_name && (
+                      <div className="mb-4 text-xs bg-blue-50 text-blue-800 p-2.5 rounded-lg border border-blue-100 font-medium">
+                        🛵 Valet: {order.channel_metadata.rider_name}
+                      </div>
+                    )}
 
                     <button 
                       onClick={() => handleReady(order._id || order.id)}

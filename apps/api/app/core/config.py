@@ -35,6 +35,14 @@ class Settings(BaseSettings):
     VAPID_PUBLIC_KEY: str = "BLVwMxkN5af4K0gIsdiw21vM4--G1eiq-mStLPpCyjqn0dnc6OSwGzSnmW4SpBwyct1jXGYcqtLOi_3ayWVgESQ"
     VAPID_CLAIM_EMAIL: str = "mailto:admin@perch.com"
 
+    # Aggregators / POS Integration (Zomato & Swiggy)
+    ZOMATO_API_KEY: str = "MOCK_ZOMATO_KEY"
+    ZOMATO_POS_BASE_URL: str = "https://api.zomato.com/v1/pos"
+    ZOMATO_WEBHOOK_SECRET: str = ""
+    SWIGGY_API_KEY: str = "MOCK_SWIGGY_KEY"
+    SWIGGY_POS_BASE_URL: str = "https://partner.swiggy.com/v1/pos"
+    SWIGGY_WEBHOOK_SECRET: str = ""
+
     class Config:
         env_file = "../../.env"
         extra = "ignore"

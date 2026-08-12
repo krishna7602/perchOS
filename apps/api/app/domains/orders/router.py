@@ -467,6 +467,20 @@ async def update_order_status(
             "payload": push_payload
         }))
 
+    # Notify external order channel driver (Zomato / Swiggy / Perch)
+    try:
+        from app.domains.orders.channels import get_order_channel
+        channel = get_order_channel(order.source)
+        if payload.order_status == "preparing":
+            asyncio.create_task(channel.accept_order(order))
+        elif payload.order_status == "ready":
+            asyncio.create_task(channel.mark_ready(order))
+        elif payload.order_status == "served":
+            asyncio.create_task(channel.mark_dispatched(order))
+    except Exception as channel_err:
+        import logging
+        logging.getLogger("perch.orders").error(f"Failed to dispatch channel status update: {channel_err}")
+
     # Handle staff status updates and notifications
     if payload.order_status == "ready":
         if order.assigned_chef_id:

@@ -1,7 +1,14 @@
+from enum import Enum
 from beanie import Document, PydanticObjectId
 from datetime import datetime
 from pydantic import BaseModel, Field
-from typing import Optional
+from typing import Any, Optional
+
+
+class OrderSource(str, Enum):
+    PERCH = "PERCH"
+    ZOMATO = "ZOMATO"
+    SWIGGY = "SWIGGY"
 
 
 class OrderLine(BaseModel):
@@ -15,7 +22,12 @@ class OrderLine(BaseModel):
 
 
 class Order(Document):
-    """A customer order placed at a venue."""
+    """A customer order placed at a venue or through an external aggregator."""
+
+    source: OrderSource = OrderSource.PERCH
+    external_order_id: str | None = None  # e.g., ZOM-82931, SWG-29182
+    channel_metadata: dict[str, Any] | None = None  # rider info, delivery driver details, prep time buffer
+    external_raw_payload: dict[str, Any] | None = None  # raw webhook payload audit log
 
     restaurant_id: Optional[PydanticObjectId] = None  # tenant isolation
     branch_id: Optional[PydanticObjectId] = None
@@ -28,7 +40,7 @@ class Order(Document):
     access_token: str | None = None
     items: list[OrderLine]
     total: float
-    payment_method: str  # "dummy_card" | "cod"
+    payment_method: str  # "dummy_card" | "cod" | "zomato_pay" | "swiggy_pay"
     payment_status: str = "pending"  # pending | paid | failed
     order_status: str = "received"  # received | preparing | ready | served
     # Timestamps
@@ -47,6 +59,7 @@ class Order(Document):
 
     class Settings:
         name = "orders"
+        indexes = ["branch_id", "source", "order_status", "external_order_id"]
 
 
 class OrderEvent(Document):

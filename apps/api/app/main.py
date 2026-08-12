@@ -15,6 +15,7 @@ from app.domains.chat.sessions import router as sessions_router
 from app.domains.chat.team_api import router as team_chat_router
 from app.domains.menu.router import router as menu_router
 from app.domains.orders.router import router as orders_router
+from app.domains.orders.webhooks_router import router as order_webhooks_router
 from app.domains.chat.router import router as chat_ws_router
 from app.routers.admin import router as admin_router
 from app.domains.networking.profile_router import router as networking_profile_router
@@ -80,6 +81,7 @@ app.include_router(branches_router)
 app.include_router(sessions_router)
 app.include_router(menu_router)
 app.include_router(orders_router)
+app.include_router(order_webhooks_router)
 app.include_router(chat_ws_router)
 app.include_router(admin_router)
 app.include_router(team_chat_router)
